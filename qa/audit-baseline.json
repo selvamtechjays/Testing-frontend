@@ -1,0 +1,18 @@
+{
+  "recorded": "2026-11-06",
+  "note": "Inherited high/critical advisories at QA setup (BL-08). Gate fails only on advisories NOT listed here. Fix via /dev:build --vulnerable (vitest upgrade), then remove entries.",
+  "advisories": [
+    {
+      "package": "tinypool",
+      "severity": "critical",
+      "url": "https://github.com/advisories/GHSA-5gmw-xhrv-c9v3",
+      "title": "Tinypool: Prototype Pollution gadget in worker options leads to Remote Code Execution"
+    },
+    {
+      "package": "tinypool",
+      "severity": "critical",
+      "url": "https://github.com/advisories/GHSA-85c8-ppgw-ccpr",
+      "title": "Tinypool: Prototype Pollution Gadget to RCE in run() options"
+    }
+  ]
+}

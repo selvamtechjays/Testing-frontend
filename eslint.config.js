@@ -6,7 +6,7 @@ import tseslint from 'typescript-eslint';
 import prettier from 'eslint-config-prettier';
 
 export default tseslint.config(
-  { ignores: ['dist', 'coverage'] },
+  { ignores: ['dist', 'coverage', 'playwright-report', 'test-results'] },
   {
     extends: [js.configs.recommended, ...tseslint.configs.recommended, prettier],
     files: ['**/*.{ts,tsx}'],
@@ -32,5 +32,15 @@ export default tseslint.config(
   {
     files: ['**/*.test.{ts,tsx}'],
     rules: { 'max-lines-per-function': 'off' },
+  },
+  {
+    // Playwright fixtures expose a `use` callback that is not a React hook.
+    files: ['e2e/**/*.ts'],
+    rules: { 'react-hooks/rules-of-hooks': 'off' },
+  },
+  {
+    // Test utilities are never fast-refreshed.
+    files: ['src/test/**/*.{ts,tsx}'],
+    rules: { 'react-refresh/only-export-components': 'off' },
   },
 );
