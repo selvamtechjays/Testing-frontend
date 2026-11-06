@@ -45,3 +45,10 @@ Feature code goes in `src/features/<feature>/`. Conventions are in the workspace
 - `npm run verify` is what CI runs: format:check, lint, typecheck, test:coverage, build. `npm run audit:gate` fails only on new high/critical advisories (baseline: `qa/audit-baseline.json`).
 - Pre-commit (husky + lint-staged) lints and format-checks staged files.
 - Conventions: co-located `*.test.ts(x)`; shared helpers in `src/test/` (`utils.tsx`, `builders/`, `mocks/`); e2e specs in `e2e/` with page objects in `e2e/pages/`. Never hit a live backend in unit/integration tests; MSW fails unhandled requests. Never skip a test or lower a threshold to go green.
+
+## Platform baseline
+
+- **Supported browsers:** latest Chrome, Edge, Firefox and Safari, desktop and mobile. Other browsers get no special handling. Automated e2e runs on Chromium only; the rest is a manual check.
+- **Accessibility baseline:** readable text (16px minimum base), a visible label or accessible name on every control, a visible focus outline, 44px minimum touch targets, every action reachable by keyboard. Basic practice only; formal WCAG conformance is not claimed.
+- **Design:** one simple default design, English only. No logo, brand colours, dark-mode switch, cookie banner, analytics prompt or language control. All UI text lives in `src/copy.ts`.
+- **Shared building blocks:** `AppShell`, `TextField` and `StatusMessage` in `src/components/`.
