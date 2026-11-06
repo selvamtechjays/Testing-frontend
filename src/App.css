@@ -1,5 +1,85 @@
-.app {
-  max-width: 1280px;
+.shell {
+  min-height: 100vh;
+  display: flex;
+  flex-direction: column;
+}
+
+.shell-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 1rem;
+  padding: 0.75rem 1rem;
+  border-bottom: 1px solid #d0d0d0;
+}
+
+.shell-brand {
+  font-size: 1.125rem;
+  font-weight: 600;
+}
+
+.shell-main {
+  width: 100%;
+  max-width: 40rem;
   margin: 0 auto;
-  padding: 2rem;
+  padding: 1rem;
+}
+
+.field {
+  display: flex;
+  flex-direction: column;
+  gap: 0.25rem;
+  margin-bottom: 1rem;
+}
+
+.field label {
+  font-weight: 600;
+}
+
+input,
+button {
+  font: inherit;
+  min-height: 44px;
+  padding: 0.5rem 0.75rem;
+}
+
+input {
+  border: 1px solid #595959;
+  border-radius: 4px;
+}
+
+input[aria-invalid='true'] {
+  border-color: #b00020;
+}
+
+button {
+  min-width: 44px;
+  border: 1px solid #1a56db;
+  border-radius: 4px;
+  background: #1a56db;
+  color: #ffffff;
+  cursor: pointer;
+}
+
+.field-error,
+.message-alert {
+  color: #b00020;
+}
+
+.message-status {
+  color: #14532d;
+}
+
+.message {
+  margin: 0 0 1rem;
+}
+
+@media (min-width: 48rem) {
+  .shell-header {
+    padding: 1rem 2rem;
+  }
+
+  .shell-main {
+    padding: 2rem;
+  }
 }
