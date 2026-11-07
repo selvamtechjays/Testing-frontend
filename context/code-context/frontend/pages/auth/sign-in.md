@@ -8,11 +8,11 @@ implementation_state: Implemented
 origin: implemented
 design_confidence: Confirmed
 implemented_at: 2026-11-07T07:40:49Z
-implemented_by_commit: pending
+implemented_by_commit: 6a794ddcd30da6f44690b64d13bf856d686dab62
 implemented_by_task: FEAT-AUTH-02-2
 mapped_from: src/pages/SignInPage.tsx
 mapped_from_line: 9
-mapped_from_commit: pending
+mapped_from_commit: 6a794ddcd30da6f44690b64d13bf856d686dab62
 generated_at: 2026-11-06
 ---
 
