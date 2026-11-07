@@ -18,4 +18,13 @@ export const copy = {
   usernameLength: 'Username must be 3 to 30 characters.',
   usernameChars: 'Username can only use letters, numbers and underscores.',
   passwordLength: 'Password must be at least 8 characters.',
+  signInHeading: 'Sign in',
+  signingIn: 'Signing in...',
+  signInMissing: 'Enter a username and password.',
+  invalidCredentials: 'Incorrect username or password.',
+  signInFailed: 'Could not sign in. Try again.',
+  signedOutNotice: 'You have been signed out.',
+  noAccount: 'New to TaskNest?',
+  registerLink: 'Create an account',
+  logOut: 'Log out',
 } as const;

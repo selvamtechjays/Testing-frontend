@@ -46,10 +46,14 @@ function toError(status: number, body: unknown): ApiError {
   return new ApiError(status, code, message, readFields(error?.fields));
 }
 
+function isSessionEnd(error: ApiError, handleUnauthorized: boolean | undefined): boolean {
+  return error.status === 401 && error.code === 'UNAUTHENTICATED' && handleUnauthorized !== false;
+}
+
 /** The only code that calls fetch. Returns parsed JSON on 2xx; throws ApiError otherwise. */
 export async function apiFetch<T>(
   path: string,
-  init: { method?: string; body?: unknown } = {},
+  init: { method?: string; body?: unknown; handleUnauthorized?: boolean } = {},
 ): Promise<T> {
   let response: Response;
   try {
@@ -65,7 +69,7 @@ export async function apiFetch<T>(
   const body: unknown = await response.json().catch(() => null);
   if (!response.ok) {
     const apiError = toError(response.status, body);
-    if (response.status === 401 && apiError.code === 'UNAUTHENTICATED') onUnauthorized?.();
+    if (isSessionEnd(apiError, init.handleUnauthorized)) onUnauthorized?.();
     throw apiError;
   }
   return body as T;

@@ -3,9 +3,16 @@ doc_type: page
 schema_version: 1.1
 produced_by: tl
 page_id: PAGE-AUTH-02
-status: Proposed
-implementation_state: Planned
-origin: designed
+status: Active
+implementation_state: Implemented
+origin: implemented
+design_confidence: Confirmed
+implemented_at: 2026-11-07T07:40:49Z
+implemented_by_commit: pending
+implemented_by_task: FEAT-AUTH-02-2
+mapped_from: src/pages/SignInPage.tsx
+mapped_from_line: 9
+mapped_from_commit: pending
 generated_at: 2026-11-06
 ---
 
@@ -17,7 +24,7 @@ PAGE-AUTH-02
 
 ## Status
 
-Proposed
+Active
 
 ## Route
 
@@ -71,3 +78,6 @@ Let a registered tester sign in with username and password and land on their own
 - Feature: FEAT-AUTH-02 (feature.md → Related Pages), FEAT-PLAT-02
 - Workflow: WF-001
 - Business rules: BR-004, BR-027
+- [code › src/pages/SignInPage.tsx:9]
+- [code › src/pages/useSignInForm.ts:9]
+- [test › src/pages/SignInPage.test.tsx]
