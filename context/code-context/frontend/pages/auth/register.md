@@ -3,9 +3,16 @@ doc_type: page
 schema_version: 1.1
 produced_by: tl
 page_id: PAGE-AUTH-01
-status: Proposed
-implementation_state: Planned
-origin: designed
+status: Active
+implementation_state: Implemented
+origin: implemented
+design_confidence: Confirmed
+implemented_at: 2026-11-06T13:50:00Z
+implemented_by_commit: 366b2aec436beb8d9a96a1e6093f10e67b641667
+implemented_by_task: FEAT-AUTH-01-2
+mapped_from: src/pages/RegisterPage.tsx
+mapped_from_line: 8
+mapped_from_commit: 366b2aec436beb8d9a96a1e6093f10e67b641667
 generated_at: 2026-11-06
 ---
 
@@ -17,7 +24,7 @@ PAGE-AUTH-01
 
 ## Status
 
-Proposed
+Active
 
 ## Route
 
@@ -72,3 +79,6 @@ Let a visitor create an account with only a username and a password and go strai
 - Feature: FEAT-AUTH-01 (feature.md → Related Pages), FEAT-PLAT-02
 - Workflow: WF-001
 - Business rules: BR-003, BR-027
+- [code › src/pages/RegisterPage.tsx:8]
+- [code › src/pages/useRegisterForm.ts:16]
+- [test › src/pages/RegisterPage.integration.test.tsx]
