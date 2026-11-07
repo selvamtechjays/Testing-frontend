@@ -6,12 +6,25 @@ interface TextFieldProps {
   value: string;
   onChange: (value: string) => void;
   error?: string;
+  hint?: string;
   type?: 'text' | 'password';
+  autoComplete?: string;
 }
 
-/** Labelled input; links its error text via aria-describedby and sets aria-invalid. */
-export function TextField({ id, label, value, onChange, error, type = 'text' }: TextFieldProps) {
+/** Labelled input; links its hint and error text via aria-describedby and sets aria-invalid. */
+export function TextField({
+  id,
+  label,
+  value,
+  onChange,
+  error,
+  hint,
+  type = 'text',
+  autoComplete,
+}: TextFieldProps) {
   const errorId = `${id}-error`;
+  const hintId = `${id}-hint`;
+  const describedBy = [hint ? hintId : null, error ? errorId : null].filter(Boolean).join(' ');
   const handleChange = (event: ChangeEvent<HTMLInputElement>) => onChange(event.target.value);
   return (
     <div className="field">
@@ -21,9 +34,15 @@ export function TextField({ id, label, value, onChange, error, type = 'text' }: 
         type={type}
         value={value}
         onChange={handleChange}
+        autoComplete={autoComplete}
         aria-invalid={error ? true : undefined}
-        aria-describedby={error ? errorId : undefined}
+        aria-describedby={describedBy || undefined}
       />
+      {hint ? (
+        <p id={hintId} className="field-hint">
+          {hint}
+        </p>
+      ) : null}
       {error ? (
         <p id={errorId} role="alert" className="field-error">
           {error}

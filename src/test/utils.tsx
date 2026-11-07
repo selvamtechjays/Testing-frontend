@@ -1,13 +1,26 @@
 import { render, type RenderOptions } from '@testing-library/react';
 import type { ReactElement, ReactNode } from 'react';
+import { MemoryRouter } from 'react-router-dom';
+import { AuthProvider } from '../auth/AuthContext';
 
-// Single place to wrap app-level providers (router, query client, theme...) as they appear.
-function Providers({ children }: { children: ReactNode }) {
-  return <>{children}</>;
+// Single place to wrap app-level providers (router, auth, ...) as they appear.
+function makeProviders(route: string) {
+  return function Providers({ children }: { children: ReactNode }) {
+    return (
+      <MemoryRouter initialEntries={[route]}>
+        <AuthProvider>{children}</AuthProvider>
+      </MemoryRouter>
+    );
+  };
 }
 
-export function renderWithProviders(ui: ReactElement, options?: Omit<RenderOptions, 'wrapper'>) {
-  return render(ui, { wrapper: Providers, ...options });
+interface ProviderOptions extends Omit<RenderOptions, 'wrapper'> {
+  route?: string;
+}
+
+export function renderWithProviders(ui: ReactElement, options: ProviderOptions = {}) {
+  const { route = '/', ...rest } = options;
+  return render(ui, { wrapper: makeProviders(route), ...rest });
 }
 
 export * from '@testing-library/react';

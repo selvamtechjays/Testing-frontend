@@ -3,6 +3,7 @@ import { MemoryRouter } from 'react-router-dom';
 import { describe, expect, it } from 'vitest';
 import { render, screen } from '@testing-library/react';
 import App from './App';
+import { AuthProvider } from './auth/AuthContext';
 
 function renderApp() {
   return render(
@@ -28,5 +29,20 @@ describe('App', () => {
     expect(screen.queryByRole('checkbox')).not.toBeInTheDocument();
     expect(screen.queryByRole('button')).not.toBeInTheDocument();
     expect(screen.queryByText(/cookie|analytics|privacy|terms/i)).not.toBeInTheDocument();
+  });
+});
+
+describe('App routes', () => {
+  it('serves the registration page at /register (AC-1 AC-2)', () => {
+    render(
+      <MemoryRouter initialEntries={['/register']}>
+        <AuthProvider>
+          <App />
+        </AuthProvider>
+      </MemoryRouter>,
+    );
+    expect(
+      screen.getByRole('heading', { level: 1, name: 'Create your account' }),
+    ).toBeInTheDocument();
   });
 });
