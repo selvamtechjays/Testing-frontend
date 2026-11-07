@@ -56,3 +56,27 @@ describe('TextField', () => {
     expect(screen.getByLabelText('Name')).toHaveAttribute('type', 'password');
   });
 });
+
+describe('TextField hint and autocomplete', () => {
+  it('links hint text with aria-describedby and passes autoComplete through (AC-2 AC-7)', () => {
+    render(
+      <TextField
+        id="u"
+        label="U"
+        value=""
+        onChange={() => {}}
+        hint="Some hint"
+        autoComplete="username"
+      />,
+    );
+    const input = screen.getByLabelText('U');
+    expect(input).toHaveAttribute('autocomplete', 'username');
+    expect(input).toHaveAttribute('aria-describedby', 'u-hint');
+    expect(screen.getByText('Some hint')).toHaveAttribute('id', 'u-hint');
+  });
+
+  it('lists hint then error ids when both are present (AC-7)', () => {
+    render(<TextField id="u" label="U" value="" onChange={() => {}} hint="h" error="bad" />);
+    expect(screen.getByLabelText('U')).toHaveAttribute('aria-describedby', 'u-hint u-error');
+  });
+});

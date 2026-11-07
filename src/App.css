@@ -83,3 +83,9 @@ button {
     padding: 2rem;
   }
 }
+
+.field-hint {
+  margin: 0;
+  color: #404040;
+  font-size: 0.875rem;
+}
