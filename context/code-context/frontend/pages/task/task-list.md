@@ -86,3 +86,7 @@ The one working screen of TaskNest: shows the signed-in user's tasks newest firs
 - Feature: FEAT-TASK-01, FEAT-TASK-02, FEAT-TASK-03, FEAT-AUTH-02, FEAT-PLAT-01, FEAT-PLAT-02
 - Workflow: WF-002, WF-003
 - Business rules: BR-008, BR-010, BR-016, BR-018, BR-023, BR-025, BR-026
+- [code › src/auth/RequireAuth.tsx:6] (session guard, FEAT-AUTH-02; the page itself is built by FEAT-TASK-01..03, so this unit stays Planned)
+- [code › src/components/LogOutButton.tsx:7] (Log out control, FEAT-AUTH-02)
+- [test › src/auth/RequireAuth.test.tsx]
+- [test › src/components/LogOutButton.test.tsx]

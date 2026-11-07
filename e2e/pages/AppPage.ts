@@ -14,7 +14,15 @@ export class AppPage {
     this.main = page.getByRole('main');
   }
 
+  /** Opens the task list as a signed-in user: the session probe is stubbed (no backend in e2e). */
   async goto() {
+    await this.page.route('**/api/auth/me', (route) =>
+      route.fulfill({
+        status: 200,
+        contentType: 'application/json',
+        body: JSON.stringify({ user: { id: '665f1c0e9b1d8a3f4c2e7a10', username: 'selvam' } }),
+      }),
+    );
     await this.page.goto('/');
   }
 }
