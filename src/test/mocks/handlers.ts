@@ -1,5 +1,6 @@
 import { http, HttpResponse } from 'msw';
 import { meUnauthenticated } from './auth';
+import { deleteTaskNoContent, listTasksEmpty } from './tasks';
 
 // Default handlers shared by every test. Keep this list minimal: per-test
 // behaviour belongs in `server.use(...)` overrides, which reset after each test.
@@ -7,4 +8,6 @@ import { meUnauthenticated } from './auth';
 export const handlers = [
   http.get('/api/__harness/ping', () => HttpResponse.json({ ok: true })),
   meUnauthenticated,
+  listTasksEmpty,
+  deleteTaskNoContent,
 ];

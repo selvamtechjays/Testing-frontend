@@ -9,7 +9,11 @@ const indexHtml = read('../index.html');
 const appCss = read('./App.css');
 const indexCss = read('./index.css');
 
-const MIN_TOUCH_TARGET = 'min-height: 44px';
+// DEC-110: the 44px control height is the `--control-height` token; the rule must use it.
+const CONTROL_HEIGHT_TOKEN = '--control-height: 44px';
+// DEC-190: the 3px focus outline is the `--focus-ring` token; :focus-visible must use it.
+const FOCUS_RING_TOKEN = /--focus-ring:\s*3px solid var\(--color-focus\)/;
+const MIN_TOUCH_TARGET = 'min-height: var(--control-height)';
 const BASE_FONT_PERCENT = /font-size:\s*(\d+)%/;
 const MIN_BASE_FONT_PERCENT = 100;
 
@@ -26,10 +30,12 @@ describe('platform baseline', () => {
 
   it('styles a visible focus outline (AC-5 AC-7 BR-3 TS-5 TS-8)', () => {
     expect(indexCss).toContain(':focus-visible');
-    expect(indexCss).toMatch(/outline:\s*3px solid/);
+    expect(indexCss).toMatch(FOCUS_RING_TOKEN);
+    expect(indexCss).toMatch(/:focus-visible\s*\{[^}]*outline:\s*var\(--focus-ring\)/);
   });
 
   it('keeps a 44px minimum touch target on inputs and buttons (AC-3 AC-5 BR-3 TS-3)', () => {
+    expect(indexCss).toContain(CONTROL_HEIGHT_TOKEN);
     expect(appCss).toContain(MIN_TOUCH_TARGET);
   });
 

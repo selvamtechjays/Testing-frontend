@@ -15,9 +15,15 @@ const FORBIDDEN_TERMS = [
 ];
 const NON_ENGLISH_CHARS = /[^\x20-\x7E]/;
 
+// Templates (functions of a title) are checked through the text they produce.
+const SAMPLE_TITLE = 'Sample task';
+const texts = Object.values(copy).map((value) =>
+  typeof value === 'function' ? value(SAMPLE_TITLE) : value,
+);
+
 describe('copy', () => {
   it('has no forbidden term in any string (AC-8 AC-11 BR-1 BR-5)', () => {
-    for (const text of Object.values(copy)) {
+    for (const text of texts) {
       const lower = text.toLowerCase();
       for (const term of FORBIDDEN_TERMS) {
         expect(lower, `"${text}" must not contain "${term}"`).not.toContain(term);
@@ -26,13 +32,13 @@ describe('copy', () => {
   });
 
   it('is plain English text with no non-Latin characters (AC-4 BR-1)', () => {
-    for (const text of Object.values(copy)) {
+    for (const text of texts) {
       expect(NON_ENGLISH_CHARS.test(text), `"${text}" must be plain English`).toBe(false);
     }
   });
 
   it('gives every string a non-empty value (AC-4)', () => {
-    for (const text of Object.values(copy)) {
+    for (const text of texts) {
       expect(text.trim().length).toBeGreaterThan(0);
     }
   });

@@ -1,4 +1,30 @@
+/* Design tokens (CSS standard §23, CSS-FE-001). Raw colours live here only. */
 :root {
+  /* Colour: text/background pairs meet WCAG AA (CSS-FE-009) */
+  --color-text: #1a1a1a;
+  --color-bg: #ffffff;
+  --color-primary: #1a56db;
+  --color-on-primary: #ffffff;
+  --color-focus: #1a56db;
+  --color-border: #d0d0d0;
+  --color-border-strong: #595959;
+  --color-danger: #b00020;
+  --color-success: #14532d;
+  --color-muted: #404040;
+
+  /* Spacing, radius, type, layout */
+  --space-1: 0.25rem;
+  --space-2: 0.5rem;
+  --space-3: 0.75rem;
+  --space-4: 1rem;
+  --space-5: 2rem;
+  --radius: 0.25rem;
+  --font-size-sm: 0.875rem;
+  --font-size-lg: 1.125rem;
+  --size-content: 40rem;
+  --control-height: 44px;
+  --focus-ring: 3px solid var(--color-focus);
+
   font-family:
     system-ui,
     -apple-system,
@@ -9,8 +35,8 @@
     sans-serif;
   font-size: 100%;
   line-height: 1.5;
-  color: #1a1a1a;
-  background: #ffffff;
+  color: var(--color-text);
+  background: var(--color-bg);
 }
 
 body {
@@ -24,6 +50,6 @@ body {
 }
 
 :focus-visible {
-  outline: 3px solid #1a56db;
+  outline: var(--focus-ring);
   outline-offset: 2px;
 }
