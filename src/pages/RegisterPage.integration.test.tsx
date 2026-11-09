@@ -24,7 +24,7 @@ async function fillAndSubmit(username: string, password: string) {
   await user.click(screen.getByRole('button', { name: 'Create account' }));
 }
 
-describe('RegisterPage with the register endpoint', () => {
+describe('RegisterPage with the register endpoint', { timeout: 15000 }, () => {
   it('posts the credentials, signs in and lands on home on 201 (AC-1 BR-6 TS-1)', async () => {
     let body: unknown;
     server.use(

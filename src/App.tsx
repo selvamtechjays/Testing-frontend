@@ -4,18 +4,9 @@ import { RequireAuth } from './auth/RequireAuth';
 import { useAuth } from './auth/AuthContext';
 import { AppShell } from './components/AppShell';
 import { LogOutButton } from './components/LogOutButton';
-import { copy } from './copy';
 import { RegisterPage } from './pages/RegisterPage';
+import { TaskListPage } from './pages/TaskListPage';
 import { SignInPage } from './pages/SignInPage';
-
-function Home() {
-  return (
-    <>
-      <h1>{copy.homeHeading}</h1>
-      <p>{copy.homeIntro}</p>
-    </>
-  );
-}
 
 function App() {
   const { status } = useAuth();
@@ -28,7 +19,7 @@ function App() {
           path="/"
           element={
             <RequireAuth>
-              <Home />
+              <TaskListPage />
             </RequireAuth>
           }
         />

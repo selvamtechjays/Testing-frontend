@@ -1,0 +1,21 @@
+.add-task-form {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+}
+
+.add-task-form .field {
+  width: 100%;
+}
+
+@media (min-width: 48rem) {
+  .add-task-form {
+    flex-direction: row;
+    align-items: flex-end;
+    gap: var(--space-3);
+  }
+
+  .add-task-form .field {
+    flex: 1;
+  }
+}

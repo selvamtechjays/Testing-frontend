@@ -4,6 +4,10 @@ import { test, expect } from './fixtures';
 
 test.describe('account registration', () => {
   test('registers and lands on the home screen (AC-1 AC-2 BR-6 TS-1 TS-2)', async ({ page }) => {
+    // The home screen lists tasks; an empty list keeps this spec hermetic.
+    await page.route('**/api/tasks', (route) =>
+      route.fulfill({ status: 200, contentType: 'application/json', body: '{"tasks":[]}' }),
+    );
     await page.route('**/api/auth/register', (route) =>
       route.fulfill({
         status: 201,

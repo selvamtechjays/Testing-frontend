@@ -1,4 +1,4 @@
-import type { ChangeEvent } from 'react';
+import type { ChangeEvent, Ref } from 'react';
 
 interface TextFieldProps {
   id: string;
@@ -9,6 +9,7 @@ interface TextFieldProps {
   hint?: string;
   type?: 'text' | 'password';
   autoComplete?: string;
+  inputRef?: Ref<HTMLInputElement>;
 }
 
 /** Labelled input; links its hint and error text via aria-describedby and sets aria-invalid. */
@@ -21,6 +22,7 @@ export function TextField({
   hint,
   type = 'text',
   autoComplete,
+  inputRef,
 }: TextFieldProps) {
   const errorId = `${id}-error`;
   const hintId = `${id}-hint`;
@@ -30,6 +32,7 @@ export function TextField({
     <div className="field">
       <label htmlFor={id}>{label}</label>
       <input
+        ref={inputRef}
         id={id}
         type={type}
         value={value}
