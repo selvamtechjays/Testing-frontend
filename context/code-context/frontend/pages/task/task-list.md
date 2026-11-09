@@ -3,9 +3,16 @@ doc_type: page
 schema_version: 1.1
 produced_by: tl
 page_id: PAGE-TASK-01
-status: Proposed
-implementation_state: Planned
-origin: designed
+status: Active
+implementation_state: Implemented
+origin: implemented
+design_confidence: Confirmed
+implemented_at: 2026-11-07T11:30:00Z
+implemented_by_commit: 5e5d079192023f299aba9b0516437928284a139a
+implemented_by_task: FEAT-TASK-01-2, FEAT-TASK-02-2, FEAT-TASK-03-2, FEAT-PLAT-01-2
+mapped_from: src/pages/TaskListPage.tsx
+mapped_from_line: 49
+mapped_from_commit: 348d5d456fade24ccb4f8479c4f7943b901b681d
 generated_at: 2026-11-06
 ---
 
@@ -17,7 +24,7 @@ PAGE-TASK-01
 
 ## Status
 
-Proposed
+Active
 
 ## Route
 
@@ -86,7 +93,29 @@ The one working screen of TaskNest: shows the signed-in user's tasks newest firs
 - Feature: FEAT-TASK-01, FEAT-TASK-02, FEAT-TASK-03, FEAT-AUTH-02, FEAT-PLAT-01, FEAT-PLAT-02
 - Workflow: WF-002, WF-003
 - Business rules: BR-008, BR-010, BR-016, BR-018, BR-023, BR-025, BR-026
-- [code › src/auth/RequireAuth.tsx:6] (session guard, FEAT-AUTH-02; the page itself is built by FEAT-TASK-01..03, so this unit stays Planned)
+- [code › src/auth/RequireAuth.tsx:6] (session guard, FEAT-AUTH-02)
 - [code › src/components/LogOutButton.tsx:7] (Log out control, FEAT-AUTH-02)
 - [test › src/auth/RequireAuth.test.tsx]
 - [test › src/components/LogOutButton.test.tsx]
+- [code › src/lib/useInstantUpdate.ts] (shared optimistic update and rollback, FEAT-PLAT-01)
+- [code › src/components/FailureNotice.tsx] (single failure-message region, FEAT-PLAT-01)
+- [code › src/tasks/taskState.ts] (pure list reducers, FEAT-PLAT-01)
+- [test › src/lib/useInstantUpdate.test.ts]
+- [code › src/pages/TaskListPage.tsx] (list, empty and load-failed states and the add form, FEAT-TASK-01)
+- [code › src/tasks/TasksProvider.tsx] (in-memory list state and optimistic add, FEAT-TASK-01)
+- [code › src/components/AddTaskForm.tsx] (add form, 200 limit, FEAT-TASK-01)
+- [code › src/components/TaskRow.tsx] (row with Pending or Completed words, FEAT-TASK-01)
+- [test › src/pages/TaskListPage.test.tsx]
+- [test › e2e/task-list.spec.ts]
+- [code › src/components/TaskRow.tsx] (tick control and title edit, FEAT-TASK-02)
+- [code › src/tasks/TasksProvider.tsx] (toggleStatus, editTitle with stored-value rollback, FEAT-TASK-02)
+- [test › src/components/TaskRow.edit.test.tsx]
+- [test › src/pages/TaskListPage.update.test.tsx]
+- [test › e2e/task-edit.spec.ts]
+- [code › src/tasks/usePendingDelete.ts] (delete with a 5 second Undo window, FEAT-TASK-03)
+- [code › src/components/UndoMessage.tsx] (Task deleted, then Undo, FEAT-TASK-03)
+- [code › src/tasks/pendingFlush.ts] (Log out sends a held deletion and waits for it, FEAT-TASK-03)
+- [test › src/pages/TaskListPage.logout.test.tsx]
+- [test › src/tasks/usePendingDelete.test.tsx]
+- [test › src/pages/TaskListPage.delete.test.tsx]
+- [test › e2e/task-delete.spec.ts]
