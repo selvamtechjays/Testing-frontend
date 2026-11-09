@@ -1,8 +1,9 @@
-import { useEffect, useRef, useState, type FormEvent, type KeyboardEvent } from 'react';
+import { useEffect, useRef, useState, type FormEvent, type KeyboardEvent, type Ref } from 'react';
 import type { Task } from '../api/types';
 import { copy } from '../copy';
 import { isTempId } from '../tasks/taskState';
 import { clampTitle, validateTitle } from '../validation/title';
+import { Button } from './Button';
 import './TaskRow.css';
 
 interface TaskRowProps {
@@ -10,6 +11,8 @@ interface TaskRowProps {
   onToggle: (id: string) => Promise<boolean>;
   onEditTitle: (id: string, title: string) => Promise<boolean>;
   onDelete: (id: string) => Promise<boolean>;
+  /** The row was removed and is animating out: hidden from assistive tech, every control off. */
+  leaving?: boolean;
 }
 
 interface EditTitleFormProps {
@@ -60,10 +63,12 @@ function EditTitleForm({ id, initial, onSave, onCancel }: EditTitleFormProps) {
         onChange={(event) => change(event.target.value)}
         onKeyDown={onKeyDown}
       />
-      <button type="submit">{copy.saveButton}</button>
-      <button type="button" onClick={onCancel}>
-        {copy.cancelButton}
-      </button>
+      <div className="task-row-actions">
+        <Button type="submit">{copy.saveButton}</Button>
+        <Button variant="secondary" onClick={onCancel}>
+          {copy.cancelButton}
+        </Button>
+      </div>
       {message ? (
         <p id={messageId} role="alert" className="field-error task-row-message">
           {message}
@@ -73,16 +78,60 @@ function EditTitleForm({ id, initial, onSave, onCancel }: EditTitleFormProps) {
   );
 }
 
+interface TaskRowViewProps {
+  task: Task;
+  completed: boolean;
+  inactive: boolean;
+  editRef: Ref<HTMLButtonElement>;
+  onEdit: () => void;
+  onDelete: () => void;
+}
+
+/** The read-only row: title, status as a word (never colour alone), then Edit and Delete. */
+function TaskRowView({ task, completed, inactive, editRef, onEdit, onDelete }: TaskRowViewProps) {
+  return (
+    <>
+      <div className="task-row-body">
+        <span className="task-row-title">{task.title}</span>
+        <span className="task-row-status">
+          {completed ? copy.statusCompleted : copy.statusPending}
+        </span>
+      </div>
+      <div className="task-row-actions">
+        <Button variant="secondary" ref={editRef} disabled={inactive} onClick={onEdit}>
+          {copy.editButton}
+        </Button>
+        <Button
+          variant="danger"
+          disabled={inactive}
+          aria-label={`${copy.deleteButton} ${task.title}`}
+          onClick={onDelete}
+        >
+          {copy.deleteButton}
+        </Button>
+      </div>
+    </>
+  );
+}
+
 /**
  * One task: a tick control, the title as plain text (or an input while editing) and the status as
  * a word, never colour alone (AC-2, AC-9). A row whose add is still unsaved ignores both controls.
  */
-export function TaskRow({ task, onToggle, onEditTitle, onDelete }: TaskRowProps) {
+export function TaskRow({ task, onToggle, onEditTitle, onDelete, leaving = false }: TaskRowProps) {
   const [editing, setEditing] = useState(false);
   const editRef = useRef<HTMLButtonElement>(null);
   const wasEditing = useRef(false);
   const completed = task.status === 'completed';
   const unsaved = isTempId(task.id);
+  const inactive = unsaved || leaving;
+  const classes = [
+    'task-row',
+    completed ? 'task-row--completed' : null,
+    leaving ? 'task-row--leaving' : null,
+  ]
+    .filter(Boolean)
+    .join(' ');
 
   // Leaving edit mode hands focus back to the Edit button.
   useEffect(() => {
@@ -96,12 +145,12 @@ export function TaskRow({ task, onToggle, onEditTitle, onDelete }: TaskRowProps)
   };
 
   return (
-    <li className={completed ? 'task-row task-row--completed' : 'task-row'}>
+    <li className={classes} aria-hidden={leaving ? true : undefined}>
       <input
         type="checkbox"
         className="task-row-toggle"
         checked={completed}
-        disabled={unsaved}
+        disabled={inactive}
         aria-label={completed ? copy.markNotCompleted(task.title) : copy.markCompleted(task.title)}
         onChange={() => void onToggle(task.id)}
       />
@@ -113,24 +162,14 @@ export function TaskRow({ task, onToggle, onEditTitle, onDelete }: TaskRowProps)
           onCancel={() => finish()}
         />
       ) : (
-        <>
-          <span className="task-row-title">{task.title}</span>
-          <span className="task-row-status">
-            {completed ? copy.statusCompleted : copy.statusPending}
-          </span>
-          <button type="button" ref={editRef} disabled={unsaved} onClick={() => setEditing(true)}>
-            {copy.editButton}
-          </button>
-          <button
-            type="button"
-            className="task-row-delete"
-            disabled={unsaved}
-            aria-label={`${copy.deleteButton} ${task.title}`}
-            onClick={() => void onDelete(task.id)}
-          >
-            {copy.deleteButton}
-          </button>
-        </>
+        <TaskRowView
+          task={task}
+          completed={completed}
+          inactive={inactive}
+          editRef={editRef}
+          onEdit={() => setEditing(true)}
+          onDelete={() => void onDelete(task.id)}
+        />
       )}
     </li>
   );

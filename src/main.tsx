@@ -4,6 +4,9 @@ import { BrowserRouter } from 'react-router-dom';
 import './index.css';
 import App from './App.tsx';
 import { AuthProvider } from './auth/AuthContext';
+import { applyMotionPreference } from './lib/motion';
+
+applyMotionPreference();
 
 createRoot(document.getElementById('root')!).render(
   <StrictMode>

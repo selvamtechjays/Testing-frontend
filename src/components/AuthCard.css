@@ -1,0 +1,27 @@
+.auth {
+  max-width: var(--size-auth);
+  margin: 0 auto;
+  animation: fade-in var(--duration-base) var(--ease-standard);
+}
+
+.auth-card {
+  margin-bottom: var(--space-4);
+}
+
+.auth-heading {
+  margin-bottom: var(--space-5);
+  font-size: var(--font-size-xl);
+  line-height: var(--line-height-xl);
+}
+
+.auth-footer {
+  margin: 0;
+  color: var(--color-muted);
+  text-align: center;
+}
+
+@media (min-width: 48rem) {
+  .auth {
+    padding-top: var(--space-5);
+  }
+}

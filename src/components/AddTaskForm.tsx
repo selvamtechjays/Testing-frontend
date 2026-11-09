@@ -1,6 +1,7 @@
 import { useRef, useState, type FormEvent } from 'react';
 import { copy } from '../copy';
 import { clampTitle, validateTitle } from '../validation/title';
+import { Button } from './Button';
 import { TextField } from './TextField';
 import './AddTaskForm.css';
 
@@ -31,7 +32,7 @@ export function AddTaskForm({ onAdd }: AddTaskFormProps) {
   };
 
   return (
-    <form className="add-task-form" onSubmit={submit} noValidate>
+    <form className="card add-task-form" onSubmit={submit} noValidate>
       <TextField
         id="new-task"
         label={copy.newTaskLabel}
@@ -41,7 +42,9 @@ export function AddTaskForm({ onAdd }: AddTaskFormProps) {
         autoComplete="off"
         inputRef={inputRef}
       />
-      <button type="submit">{copy.addTask}</button>
+      <Button type="submit" className="add-task-submit">
+        {copy.addTask}
+      </Button>
     </form>
   );
 }

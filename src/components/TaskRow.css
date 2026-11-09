@@ -1,24 +1,50 @@
+/* One task row: check · title + status · actions. Wraps actions under the title on narrow screens. */
 .task-row {
   display: flex;
+  flex-wrap: wrap;
   align-items: center;
-  justify-content: space-between;
-  gap: var(--space-4);
+  gap: var(--space-2) var(--space-3);
   padding: var(--space-3) 0;
-  border-bottom: 1px solid var(--color-border);
+  border-bottom: 1px solid var(--color-divider);
+  animation: task-row-enter var(--duration-base) var(--ease-standard);
+}
+
+.task-row:last-child {
+  border-bottom-color: transparent;
+}
+
+.task-row--leaving {
+  pointer-events: none;
+  animation: task-row-leave var(--duration-base) var(--ease-standard) forwards;
+}
+
+.task-row-body {
+  display: flex;
+  flex: 1 1 10rem;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: var(--space-1);
+  min-width: 0;
 }
 
 .task-row-title {
-  flex: 1;
+  max-width: 100%;
+  font-size: var(--font-size-base);
+  line-height: var(--line-height-base);
   overflow-wrap: anywhere;
+  transition: color var(--duration-base) var(--ease-standard);
 }
 
 .task-row-status {
   flex-shrink: 0;
-  padding: var(--space-1) var(--space-2);
-  border: 1px solid var(--color-border-strong);
-  border-radius: var(--radius);
+  padding: 0 var(--space-2);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-full);
+  background: var(--color-surface);
+  color: var(--color-muted);
   font-size: var(--font-size-sm);
-  font-weight: 600;
+  line-height: var(--line-height-sm);
+  font-weight: var(--font-weight-semibold);
 }
 
 .task-row--completed .task-row-title {
@@ -28,28 +54,97 @@
 
 .task-row--completed .task-row-status {
   border-color: var(--color-success);
+  background: var(--color-success-subtle);
   color: var(--color-success);
 }
 
-.task-row-toggle {
-  flex-shrink: 0;
-  width: var(--control-height);
-  margin: 0;
-  padding: 0;
-  accent-color: var(--color-primary);
+.task-row-actions {
+  display: flex;
+  gap: var(--space-2);
+  margin-left: auto;
 }
 
+/* Tick control: a 44px hit area drawing a smaller box, so the target stays large (CSS-FE-006). */
+.task-row-toggle {
+  position: relative;
+  flex-shrink: 0;
+  width: var(--control-height);
+  height: var(--control-height);
+  margin: 0;
+  padding: 0;
+  border: 0;
+  border-radius: var(--radius-sm);
+  background: transparent;
+  cursor: pointer;
+  appearance: none;
+}
+
+.task-row-toggle::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  width: var(--check-size);
+  height: var(--check-size);
+  margin: auto;
+  border: 2px solid var(--color-border-strong);
+  border-radius: var(--radius-sm);
+  background: var(--color-surface);
+  transition:
+    background-color var(--duration-fast) var(--ease-standard),
+    border-color var(--duration-fast) var(--ease-standard);
+}
+
+.task-row-toggle::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  width: calc(var(--check-size) * 0.3);
+  height: calc(var(--check-size) * 0.55);
+  margin: auto;
+  border: solid var(--color-on-primary);
+  border-width: 0 2px 2px 0;
+  opacity: 0;
+  transform: translateY(-10%) rotate(45deg) scale(0.6);
+  transition:
+    opacity var(--duration-fast) var(--ease-standard),
+    transform var(--duration-fast) var(--ease-standard);
+}
+
+.task-row-toggle:hover:not(:disabled)::before {
+  border-color: var(--color-primary);
+}
+
+.task-row-toggle:checked::before {
+  border-color: var(--color-primary);
+  background: var(--color-primary);
+}
+
+.task-row-toggle:checked::after {
+  opacity: 1;
+  transform: translateY(-10%) rotate(45deg) scale(1);
+}
+
+.task-row-toggle:disabled {
+  cursor: not-allowed;
+}
+
+.task-row-toggle:disabled::before {
+  border-color: var(--color-disabled-bg);
+  background: var(--color-disabled-bg);
+}
+
+/* Inline title edit */
 .task-row-form {
   display: flex;
-  flex: 1;
+  flex: 1 1 14rem;
   flex-wrap: wrap;
   align-items: center;
   gap: var(--space-2);
 }
 
 .task-row-input {
-  flex: 1;
-  min-width: 10rem;
+  flex: 1 1 10rem;
+  min-width: 0;
 }
 
 .task-row-message {
@@ -57,8 +152,21 @@
   margin: 0;
 }
 
-.task-row-delete {
-  border-color: var(--color-danger);
-  background: var(--color-bg);
-  color: var(--color-danger);
+@keyframes task-row-enter {
+  from {
+    opacity: 0;
+    transform: translateY(-0.25rem);
+  }
+
+  to {
+    opacity: 1;
+    transform: none;
+  }
+}
+
+@keyframes task-row-leave {
+  to {
+    opacity: 0;
+    transform: translateX(0.75rem);
+  }
 }

@@ -2,6 +2,7 @@ import { AddTaskForm } from '../components/AddTaskForm';
 import { FailureNotice } from '../components/FailureNotice';
 import { StatusMessage } from '../components/StatusMessage';
 import { TaskList } from '../components/TaskList';
+import { TaskListEmpty, TaskListLoading } from '../components/TaskListStates';
 import { UndoMessage } from '../components/UndoMessage';
 import { useAuth } from '../auth/AuthContext';
 import { copy } from '../copy';
@@ -11,10 +12,10 @@ import { useTasks } from '../tasks/useTasks';
 
 function Body() {
   const { tasks, status, toggleStatus, editTitle, startDelete } = useTasks();
-  if (status === 'loading') return <p>{copy.tasksLoading}</p>;
+  if (status === 'loading') return <TaskListLoading />;
   if (status === 'loadFailed')
     return <StatusMessage kind="alert">{copy.tasksLoadFailed}</StatusMessage>;
-  if (status === 'empty') return <p>{copy.tasksEmpty}</p>;
+  if (status === 'empty') return <TaskListEmpty />;
   return (
     <TaskList
       tasks={tasks}
@@ -33,8 +34,10 @@ function Content() {
   const canAdd = status === 'empty' || status === 'populated';
   return (
     <>
-      <h1>{copy.homeHeading}</h1>
-      <p>{copy.homeIntro}</p>
+      <div className="page-header">
+        <h1>{copy.homeHeading}</h1>
+        <p className="page-intro">{copy.homeIntro}</p>
+      </div>
       {canAdd ? <AddTaskForm onAdd={(title) => void addTask(title)} /> : null}
       <FailureNotice message={message} onDismiss={dismiss} />
       <UndoMessage visible={deletePending} onUndo={undoDelete} />

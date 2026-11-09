@@ -1,5 +1,42 @@
+/* The undo toast floats above the page (--shadow-overlay), bottom-centre, and slides in. */
 .undo-message {
+  position: fixed;
+  bottom: var(--space-4);
+  left: 50%;
+  z-index: 2;
   display: flex;
   align-items: center;
-  gap: var(--space-3);
+  gap: var(--space-2);
+  width: max-content;
+  max-width: calc(100% - var(--space-5));
+  padding: var(--space-1) var(--space-1) var(--space-1) var(--space-4);
+  border: 1px solid var(--color-divider);
+  border-radius: var(--radius-md);
+  background: var(--color-surface);
+  box-shadow: var(--shadow-overlay);
+  font-weight: var(--font-weight-medium);
+  transform: translateX(-50%);
+  animation: undo-message-enter var(--duration-base) var(--ease-standard);
+}
+
+.undo-message-action {
+  color: var(--color-primary);
+}
+
+@keyframes undo-message-enter {
+  from {
+    opacity: 0;
+    transform: translate(-50%, 0.75rem);
+  }
+
+  to {
+    opacity: 1;
+    transform: translate(-50%, 0);
+  }
+}
+
+@media (min-width: 48rem) {
+  .undo-message {
+    bottom: var(--space-5);
+  }
 }

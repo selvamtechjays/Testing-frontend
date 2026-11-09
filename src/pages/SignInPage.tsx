@@ -1,4 +1,6 @@
 import { Link, Navigate, useLocation } from 'react-router-dom';
+import { AuthCard } from '../components/AuthCard';
+import { Button } from '../components/Button';
 import { StatusMessage } from '../components/StatusMessage';
 import { TextField } from '../components/TextField';
 import { useAuth } from '../auth/AuthContext';
@@ -16,8 +18,14 @@ export function SignInPage() {
   if (status === 'signedIn') return <Navigate to="/" replace />;
 
   return (
-    <>
-      <h1>{copy.signInHeading}</h1>
+    <AuthCard
+      heading={copy.signInHeading}
+      footer={
+        <>
+          {copy.noAccount} <Link to="/register">{copy.registerLink}</Link>
+        </>
+      }
+    >
       {signedOutNotice ? <StatusMessage kind="status">{copy.signedOutNotice}</StatusMessage> : null}
       <form ref={form.formRef} onSubmit={form.submit} noValidate>
         <TextField
@@ -36,13 +44,10 @@ export function SignInPage() {
           autoComplete="current-password"
         />
         {form.error ? <StatusMessage kind="alert">{form.error}</StatusMessage> : null}
-        <button type="submit" disabled={form.submitting}>
+        <Button type="submit" block disabled={form.submitting}>
           {form.submitting ? copy.signingIn : copy.signInHeading}
-        </button>
+        </Button>
       </form>
-      <p>
-        {copy.noAccount} <Link to="/register">{copy.registerLink}</Link>
-      </p>
-    </>
+    </AuthCard>
   );
 }

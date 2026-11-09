@@ -1,28 +1,76 @@
-/* Design tokens (CSS standard §23, CSS-FE-001). Raw colours live here only. */
+/*
+ * Design tokens — the only source of visual values (ui-standards.md §2, CSS-FE-001).
+ * Raw colours, px font sizes, shadows and timings live here and nowhere else.
+ */
 :root {
-  /* Colour: text/background pairs meet WCAG AA (CSS-FE-009) */
+  /* Colour — semantic names only; pairs measured in ui-standards.md §3 (CSS-FE-009) */
   --color-text: #1a1a1a;
+  --color-muted: #404040;
   --color-bg: #ffffff;
+  --color-surface: #ffffff;
+  --color-canvas: #f5f6f8;
+  --color-subtle: #eef0f3;
   --color-primary: #1a56db;
+  --color-primary-hover: #1646b4;
+  --color-primary-active: #123a94;
+  --color-primary-subtle: #eaf0fd;
   --color-on-primary: #ffffff;
   --color-focus: #1a56db;
-  --color-border: #d0d0d0;
+  --color-border: #8c8c8c;
   --color-border-strong: #595959;
+  --color-divider: #e3e5e8;
   --color-danger: #b00020;
+  --color-danger-hover: #8f001a;
+  --color-danger-subtle: #fdecee;
   --color-success: #14532d;
-  --color-muted: #404040;
+  --color-success-subtle: #e8f5ec;
+  --color-disabled: #6b6b6b;
+  --color-disabled-bg: #ececec;
 
-  /* Spacing, radius, type, layout */
+  /* Spacing */
   --space-1: 0.25rem;
   --space-2: 0.5rem;
   --space-3: 0.75rem;
   --space-4: 1rem;
   --space-5: 2rem;
-  --radius: 0.25rem;
+  --space-6: 3rem;
+
+  /* Type — each step pairs size with line-height and weight */
   --font-size-sm: 0.875rem;
+  --line-height-sm: 1.25rem;
+  --font-size-base: 1rem;
+  --line-height-base: 1.5rem;
   --font-size-lg: 1.125rem;
+  --line-height-lg: 1.75rem;
+  --font-size-xl: 1.5rem;
+  --line-height-xl: 2rem;
+  --font-size-2xl: 1.875rem;
+  --line-height-2xl: 2.375rem;
+  --font-weight-regular: 400;
+  --font-weight-medium: 500;
+  --font-weight-semibold: 600;
+  --font-weight-bold: 700;
+
+  /* Radius — by component role */
+  --radius-sm: 0.375rem;
+  --radius-md: 0.75rem;
+  --radius-full: 9999px;
+  --radius: var(--radius-sm);
+
+  /* Elevation */
+  --shadow-raised: 0 1px 2px rgb(16 24 40 / 6%), 0 1px 3px rgb(16 24 40 / 10%);
+  --shadow-overlay: 0 12px 24px -4px rgb(16 24 40 / 16%), 0 4px 8px -2px rgb(16 24 40 / 8%);
+
+  /* Motion */
+  --duration-fast: 120ms;
+  --duration-base: 200ms;
+  --ease-standard: cubic-bezier(0.2, 0, 0, 1);
+
+  /* Layout and controls */
   --size-content: 40rem;
+  --size-auth: 26rem;
   --control-height: 44px;
+  --check-size: 1.375rem;
   --focus-ring: 3px solid var(--color-focus);
 
   font-family:
@@ -36,11 +84,19 @@
   font-size: 100%;
   line-height: 1.5;
   color: var(--color-text);
-  background: var(--color-bg);
+  background: var(--color-canvas);
+  -webkit-font-smoothing: antialiased;
+}
+
+/* Reduced motion: set on <html> at start-up from the user's OS preference (src/lib/motion.ts). */
+:root[data-reduced-motion='true'] {
+  --duration-fast: 0ms;
+  --duration-base: 0ms;
 }
 
 body {
   margin: 0;
+  background: var(--color-canvas);
 }
 
 *,

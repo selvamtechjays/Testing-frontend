@@ -1,4 +1,6 @@
 import { Link } from 'react-router-dom';
+import { AuthCard } from '../components/AuthCard';
+import { Button } from '../components/Button';
 import { StatusMessage } from '../components/StatusMessage';
 import { TextField } from '../components/TextField';
 import { copy } from '../copy';
@@ -8,8 +10,14 @@ import { useRegisterForm } from './useRegisterForm';
 export function RegisterPage() {
   const form = useRegisterForm();
   return (
-    <>
-      <h1>{copy.registerHeading}</h1>
+    <AuthCard
+      heading={copy.registerHeading}
+      footer={
+        <>
+          {copy.haveAccount} <Link to="/signin">{copy.signInLink}</Link>
+        </>
+      }
+    >
       <form ref={form.formRef} onSubmit={form.submit} noValidate>
         <TextField
           id="username"
@@ -31,13 +39,10 @@ export function RegisterPage() {
           autoComplete="new-password"
         />
         {form.formError ? <StatusMessage kind="alert">{form.formError}</StatusMessage> : null}
-        <button type="submit" disabled={form.submitting}>
+        <Button type="submit" block disabled={form.submitting}>
           {form.submitting ? copy.creatingAccount : copy.createAccount}
-        </button>
+        </Button>
       </form>
-      <p>
-        {copy.haveAccount} <Link to="/signin">{copy.signInLink}</Link>
-      </p>
-    </>
+    </AuthCard>
   );
 }

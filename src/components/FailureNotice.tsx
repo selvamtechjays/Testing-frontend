@@ -1,5 +1,6 @@
 import { useEffect } from 'react';
 import { copy } from '../copy';
+import { Button } from './Button';
 import './FailureNotice.css';
 
 interface FailureNoticeProps {
@@ -25,9 +26,9 @@ export function FailureNotice({ message, onDismiss }: FailureNoticeProps) {
   return (
     <div role="alert" className="failure-notice message message-alert">
       <span className="failure-notice-text">{message}</span>
-      <button type="button" className="failure-notice-dismiss" onClick={onDismiss}>
+      <Button variant="quiet" className="failure-notice-dismiss" onClick={onDismiss}>
         {copy.dismiss}
-      </button>
+      </Button>
     </div>
   );
 }

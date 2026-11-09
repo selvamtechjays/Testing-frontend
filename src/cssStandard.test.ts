@@ -48,6 +48,21 @@ describe('CSS standard §23 (DEC-110)', () => {
       '--space-4',
       '--radius',
       '--control-height',
+      // ui-standards.md �2: the six scales
+      '--space-6',
+      '--font-size-base',
+      '--line-height-base',
+      '--font-size-xl',
+      '--font-size-2xl',
+      '--font-weight-semibold',
+      '--radius-sm',
+      '--radius-md',
+      '--radius-full',
+      '--shadow-raised',
+      '--shadow-overlay',
+      '--duration-fast',
+      '--duration-base',
+      '--ease-standard',
     ]) {
       expect(rootBlock, token).toContain(`${token}:`);
     }
@@ -106,6 +121,14 @@ describe('CSS standard §23 (DEC-110)', () => {
   );
 
   it.each(files.map((f) => [f.name, f.css] as const))(
+    '%s has no inline timings: transitions and animations use the motion tokens (ui-standards §2)',
+    (_name, css) => {
+      const body = outsideRoot(css).replace(/:root\[[^\]]*\]\s*\{[^}]*\}/g, '');
+      expect(body).not.toMatch(/\b\d+(?:\.\d+)?m?s\b/);
+    },
+  );
+
+  it.each(files.map((f) => [f.name, f.css] as const))(
     '%s uses kebab-case class names and no ID selectors (CSS-FE-004)',
     (_name, css) => {
       const selectors = outsideRoot(css).replace(/\{[^}]*\}/g, ' ');
@@ -139,6 +162,13 @@ describe('CSS standard §23 (DEC-110)', () => {
     expect(ratio('--color-success', '--color-bg')).toBeGreaterThanOrEqual(BODY);
     expect(ratio('--color-on-primary', '--color-primary')).toBeGreaterThanOrEqual(BODY);
     expect(ratio('--color-border-strong', '--color-bg')).toBeGreaterThanOrEqual(UI);
+    // ui-standards.md �3: control boundaries meet the 3:1 non-text floor (WCAG 2.2 1.4.11)
+    expect(ratio('--color-border', '--color-bg')).toBeGreaterThanOrEqual(UI);
+    expect(ratio('--color-on-primary', '--color-primary-hover')).toBeGreaterThanOrEqual(BODY);
+    expect(ratio('--color-danger', '--color-danger-subtle')).toBeGreaterThanOrEqual(BODY);
+    expect(ratio('--color-success', '--color-success-subtle')).toBeGreaterThanOrEqual(BODY);
+    expect(ratio('--color-muted', '--color-canvas')).toBeGreaterThanOrEqual(BODY);
+    expect(ratio('--color-disabled', '--color-disabled-bg')).toBeGreaterThanOrEqual(BODY);
     expect(ratio('--color-focus', '--color-bg')).toBeGreaterThanOrEqual(UI);
   });
 });
