@@ -23,6 +23,10 @@ export class AppPage {
         body: JSON.stringify({ user: { id: '665f1c0e9b1d8a3f4c2e7a10', username: 'selvam' } }),
       }),
     );
+    // The home screen lists tasks; an empty list keeps this spec hermetic (no backend in e2e).
+    await this.page.route('**/api/tasks', (route) =>
+      route.fulfill({ status: 200, contentType: 'application/json', body: '{"tasks":[]}' }),
+    );
     await this.page.goto('/');
   }
 }

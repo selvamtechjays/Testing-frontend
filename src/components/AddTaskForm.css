@@ -1,0 +1,31 @@
+.add-task-form {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-3);
+}
+
+.add-task-form .field {
+  width: 100%;
+  margin-bottom: 0;
+}
+
+.add-task-submit {
+  width: 100%;
+}
+
+@media (min-width: 48rem) {
+  .add-task-form {
+    flex-direction: row;
+    align-items: flex-start;
+  }
+
+  .add-task-form .field {
+    flex: 1;
+  }
+
+  .add-task-submit {
+    width: auto;
+    min-width: 6rem;
+    margin-top: calc(var(--line-height-sm) + var(--space-1));
+  }
+}

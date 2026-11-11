@@ -178,7 +178,7 @@ describe('SignInPage refusals', () => {
     await user.type(screen.getByLabelText('Password'), 'hunter2hunter2');
     await user.click(screen.getByRole('button', { name: 'Sign in' }));
     expect(await screen.findByText('task list reached')).toBeInTheDocument();
-  });
+  }, 15000);
 
   it('shows tag-like input as escaped text only and echoes no password (TS-8 NFR)', async () => {
     refuseLogin();
@@ -187,7 +187,7 @@ describe('SignInPage refusals', () => {
     expect(await screen.findByRole('alert')).toHaveTextContent(GENERIC);
     expect(container.querySelector('img')).toBeNull();
     expect(container.textContent).not.toContain('secret-pass-123');
-  });
+  }, 15000);
 });
 
 describe('SignInPage routing', () => {

@@ -9,6 +9,8 @@ async function renderHome() {
   server.use(meSignedIn);
   renderWithProviders(<App />, { route: '/' });
   await screen.findByRole('heading', { level: 1, name: 'TaskNest' });
+  // The list has finished loading once the add control appears.
+  await screen.findByRole('button', { name: 'Add' });
 }
 
 describe('App', () => {
@@ -18,13 +20,16 @@ describe('App', () => {
     expect(screen.getAllByRole('main')).toHaveLength(1);
   });
 
-  it('offers no language control, logo, dark-mode switch or cookie prompt, and only Log out as a button (AC-8 AC-10 TS-9 TS-11)', async () => {
+  it('offers no language control, logo, dark-mode switch or cookie prompt, and only Log out and Add as buttons (AC-8 AC-10 TS-9 TS-11)', async () => {
     await renderHome();
     expect(screen.queryByRole('combobox')).not.toBeInTheDocument();
     expect(screen.queryByRole('img')).not.toBeInTheDocument();
     expect(screen.queryByRole('switch')).not.toBeInTheDocument();
     expect(screen.queryByRole('checkbox')).not.toBeInTheDocument();
-    expect(screen.getAllByRole('button').map((button) => button.textContent)).toEqual(['Log out']);
+    expect(screen.getAllByRole('button').map((button) => button.textContent)).toEqual([
+      'Log out',
+      'Add',
+    ]);
     expect(screen.queryByText(/cookie|analytics|privacy|terms/i)).not.toBeInTheDocument();
   });
 });

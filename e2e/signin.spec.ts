@@ -13,6 +13,8 @@ const json = (status: number, body?: unknown) => ({
 /** A tiny stateful stand-in for the session endpoints: login sets it, logout clears it. */
 async function stubSessionApi(page: Page, options: { signedIn: boolean }) {
   let signedIn = options.signedIn;
+  // The task list the home screen loads once signed in; empty keeps the spec hermetic.
+  await page.route('**/api/tasks', (route) => route.fulfill(json(200, { tasks: [] })));
   await page.route('**/api/auth/me', (route) =>
     route.fulfill(
       signedIn

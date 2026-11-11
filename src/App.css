@@ -1,3 +1,5 @@
+/* Shared frame, fields, cards and messages (ui-standards.md; CSS-FE-003 reuse first). */
+
 .shell {
   min-height: 100vh;
   display: flex;
@@ -5,87 +7,176 @@
 }
 
 .shell-header {
+  position: sticky;
+  top: 0;
+  z-index: 1;
   display: flex;
   align-items: center;
   justify-content: space-between;
-  gap: 1rem;
-  padding: 0.75rem 1rem;
-  border-bottom: 1px solid #d0d0d0;
+  gap: var(--space-4);
+  padding: var(--space-3) var(--space-4);
+  border-bottom: 1px solid var(--color-divider);
+  background: var(--color-surface);
 }
 
 .shell-brand {
-  font-size: 1.125rem;
-  font-weight: 600;
+  font-size: var(--font-size-lg);
+  line-height: var(--line-height-lg);
+  font-weight: var(--font-weight-bold);
+  letter-spacing: -0.01em;
 }
 
 .shell-main {
   width: 100%;
-  max-width: 40rem;
+  max-width: var(--size-content);
   margin: 0 auto;
-  padding: 1rem;
+  padding: var(--space-5) var(--space-4) var(--space-6);
 }
 
+/* Type */
+h1 {
+  margin: 0 0 var(--space-2);
+  font-size: var(--font-size-2xl);
+  line-height: var(--line-height-2xl);
+  font-weight: var(--font-weight-bold);
+  letter-spacing: -0.02em;
+}
+
+.page-header {
+  margin-bottom: var(--space-5);
+}
+
+.page-intro {
+  margin: 0;
+  color: var(--color-muted);
+  font-size: var(--font-size-lg);
+  line-height: var(--line-height-lg);
+}
+
+a {
+  color: var(--color-primary);
+  font-weight: var(--font-weight-medium);
+  text-underline-offset: 0.2em;
+}
+
+a:hover {
+  color: var(--color-primary-hover);
+}
+
+/* Card: the one raised surface */
+.card {
+  margin-bottom: var(--space-4);
+  padding: var(--space-4);
+  border: 1px solid var(--color-divider);
+  border-radius: var(--radius-md);
+  background: var(--color-surface);
+  box-shadow: var(--shadow-raised);
+}
+
+/* Fields */
 .field {
   display: flex;
   flex-direction: column;
-  gap: 0.25rem;
-  margin-bottom: 1rem;
+  gap: var(--space-1);
+  margin-bottom: var(--space-4);
 }
 
 .field label {
-  font-weight: 600;
+  font-size: var(--font-size-sm);
+  line-height: var(--line-height-sm);
+  font-weight: var(--font-weight-semibold);
 }
 
 input,
 button {
   font: inherit;
-  min-height: 44px;
-  padding: 0.5rem 0.75rem;
+  min-height: var(--control-height);
+  padding: var(--space-2) var(--space-3);
 }
 
 input {
-  border: 1px solid #595959;
-  border-radius: 4px;
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-sm);
+  background: var(--color-surface);
+  color: var(--color-text);
+  transition: border-color var(--duration-fast) var(--ease-standard);
+}
+
+input:hover {
+  border-color: var(--color-border-strong);
+}
+
+input:focus-visible {
+  border-color: var(--color-primary);
 }
 
 input[aria-invalid='true'] {
-  border-color: #b00020;
+  border-color: var(--color-danger);
 }
 
-button {
-  min-width: 44px;
-  border: 1px solid #1a56db;
-  border-radius: 4px;
-  background: #1a56db;
-  color: #ffffff;
-  cursor: pointer;
-}
-
-.field-error,
-.message-alert {
-  color: #b00020;
-}
-
-.message-status {
-  color: #14532d;
-}
-
-.message {
-  margin: 0 0 1rem;
-}
-
-@media (min-width: 48rem) {
-  .shell-header {
-    padding: 1rem 2rem;
-  }
-
-  .shell-main {
-    padding: 2rem;
-  }
+input:disabled {
+  border-color: var(--color-disabled-bg);
+  background: var(--color-disabled-bg);
+  color: var(--color-disabled);
 }
 
 .field-hint {
   margin: 0;
-  color: #404040;
-  font-size: 0.875rem;
+  color: var(--color-muted);
+  font-size: var(--font-size-sm);
+  line-height: var(--line-height-sm);
+}
+
+.field-error {
+  margin: 0;
+  color: var(--color-danger);
+  font-size: var(--font-size-sm);
+  line-height: var(--line-height-sm);
+  font-weight: var(--font-weight-medium);
+}
+
+/* Messages: tinted banners, never colour alone (role + text carry the meaning) */
+.message {
+  margin: 0 0 var(--space-4);
+  padding: var(--space-3) var(--space-4);
+  border: 1px solid transparent;
+  border-left-width: 4px;
+  border-radius: var(--radius-sm);
+  animation: fade-in var(--duration-base) var(--ease-standard);
+}
+
+.message-alert {
+  border-color: var(--color-danger);
+  background: var(--color-danger-subtle);
+  color: var(--color-danger);
+}
+
+.message-status {
+  border-color: var(--color-success);
+  background: var(--color-success-subtle);
+  color: var(--color-success);
+}
+
+@keyframes fade-in {
+  from {
+    opacity: 0;
+  }
+
+  to {
+    opacity: 1;
+  }
+}
+
+@media (min-width: 48rem) {
+  .shell-header {
+    padding: var(--space-4) var(--space-5);
+  }
+
+  .shell-main {
+    padding: var(--space-6) var(--space-5);
+  }
+
+  .card {
+    padding: var(--space-5);
+  }
 }

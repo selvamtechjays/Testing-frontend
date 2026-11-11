@@ -46,14 +46,21 @@ function toError(status: number, body: unknown): ApiError {
   return new ApiError(status, code, message, readFields(error?.fields));
 }
 
-function isSessionEnd(error: ApiError, handleUnauthorized: boolean | undefined): boolean {
-  return error.status === 401 && error.code === 'UNAUTHENTICATED' && handleUnauthorized !== false;
+/** True for the one answer that means the session is over: 401 with the UNAUTHENTICATED code. */
+export function isSessionEnd(error: unknown): boolean {
+  return error instanceof ApiError && error.status === 401 && error.code === 'UNAUTHENTICATED';
 }
 
 /** The only code that calls fetch. Returns parsed JSON on 2xx; throws ApiError otherwise. */
 export async function apiFetch<T>(
   path: string,
-  init: { method?: string; body?: unknown; handleUnauthorized?: boolean } = {},
+  init: {
+    method?: string;
+    body?: unknown;
+    handleUnauthorized?: boolean;
+    signal?: AbortSignal;
+    keepalive?: boolean;
+  } = {},
 ): Promise<T> {
   let response: Response;
   try {
@@ -62,6 +69,8 @@ export async function apiFetch<T>(
       credentials: 'same-origin',
       headers: init.body === undefined ? undefined : { 'Content-Type': 'application/json' },
       body: init.body === undefined ? undefined : JSON.stringify(init.body),
+      signal: init.signal,
+      keepalive: init.keepalive,
     });
   } catch {
     throw new ApiError(0, 'NETWORK', '');
@@ -69,7 +78,7 @@ export async function apiFetch<T>(
   const body: unknown = await response.json().catch(() => null);
   if (!response.ok) {
     const apiError = toError(response.status, body);
-    if (isSessionEnd(apiError, init.handleUnauthorized)) onUnauthorized?.();
+    if (init.handleUnauthorized !== false && isSessionEnd(apiError)) onUnauthorized?.();
     throw apiError;
   }
   return body as T;
