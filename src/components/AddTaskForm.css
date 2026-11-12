@@ -4,6 +4,12 @@
   gap: var(--space-3);
 }
 
+/* Composer: raised card that glows while a field inside has focus */
+.add-task-form:focus-within {
+  border-color: var(--color-primary);
+  box-shadow: var(--shadow-hover);
+}
+
 .add-task-form .field {
   width: 100%;
   margin-bottom: 0;

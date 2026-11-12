@@ -45,7 +45,8 @@ describe('platform baseline', () => {
     expect(queries[0]).toContain('min-width');
   });
 
-  it('has no dark-mode switch or brand artwork in the base styles (AC-10 BR-4 TS-11)', () => {
-    expect(indexCss + appCss).not.toMatch(/prefers-color-scheme|background-image|url\(/);
+  it('has no image artwork in the base styles, and dark mode only as index.css tokens (AC-10 BR-4 TS-11, DEC-200)', () => {
+    expect(indexCss + appCss).not.toMatch(/background-image|url\(/);
+    expect(appCss).not.toMatch(/prefers-color-scheme/);
   });
 });

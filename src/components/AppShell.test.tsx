@@ -35,6 +35,17 @@ describe('AppShell', () => {
     expect(onLogOut).toHaveBeenCalledTimes(1);
   });
 
+  it('shows the brand mark as decoration beside the app name (Task-21 AC-1)', () => {
+    render(
+      <AppShell>
+        <p>content</p>
+      </AppShell>,
+    );
+    const brand = screen.getByText('TaskNest');
+    expect(brand).toHaveClass('shell-brand');
+    expect(brand.querySelector('.shell-mark')).toHaveAttribute('aria-hidden', 'true');
+  });
+
   it('renders no actions area when none are given (AC-10)', () => {
     render(
       <AppShell>

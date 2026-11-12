@@ -4,16 +4,52 @@
   flex-wrap: wrap;
   align-items: center;
   gap: var(--space-2) var(--space-3);
-  padding: var(--space-3) 0;
+  padding: var(--space-3) var(--space-2);
   border-bottom: 1px solid var(--color-divider);
-  animation: task-row-enter var(--duration-base) var(--ease-standard);
+  border-radius: var(--radius-sm);
+  animation: task-row-enter var(--duration-base) var(--ease-emphasized) both;
+  transition: background-color var(--duration-fast) var(--ease-standard);
+}
+
+.task-row:hover {
+  background: var(--color-subtle);
+}
+
+/* Cascade: the first rows enter one after another */
+.task-row:nth-child(2) {
+  animation-delay: calc(var(--stagger-step) * 1);
+}
+
+.task-row:nth-child(3) {
+  animation-delay: calc(var(--stagger-step) * 2);
+}
+
+.task-row:nth-child(4) {
+  animation-delay: calc(var(--stagger-step) * 3);
+}
+
+.task-row:nth-child(5) {
+  animation-delay: calc(var(--stagger-step) * 4);
+}
+
+.task-row:nth-child(6) {
+  animation-delay: calc(var(--stagger-step) * 5);
+}
+
+.task-row:nth-child(7) {
+  animation-delay: calc(var(--stagger-step) * 6);
+}
+
+.task-row:nth-child(8) {
+  animation-delay: calc(var(--stagger-step) * 7);
 }
 
 .task-row:last-child {
   border-bottom-color: transparent;
 }
 
-.task-row--leaving {
+.task-row.task-row--leaving {
+  overflow: hidden;
   pointer-events: none;
   animation: task-row-leave var(--duration-base) var(--ease-standard) forwards;
 }
@@ -32,7 +68,11 @@
   font-size: var(--font-size-base);
   line-height: var(--line-height-base);
   overflow-wrap: anywhere;
-  transition: color var(--duration-base) var(--ease-standard);
+  text-decoration: line-through;
+  text-decoration-color: transparent;
+  transition:
+    color var(--duration-base) var(--ease-standard),
+    text-decoration-color var(--duration-base) var(--ease-standard);
 }
 
 .task-row-status {
@@ -49,7 +89,7 @@
 
 .task-row--completed .task-row-title {
   color: var(--color-muted);
-  text-decoration: line-through;
+  text-decoration-color: var(--color-muted);
 }
 
 .task-row--completed .task-row-status {
@@ -91,7 +131,8 @@
   background: var(--color-surface);
   transition:
     background-color var(--duration-fast) var(--ease-standard),
-    border-color var(--duration-fast) var(--ease-standard);
+    border-color var(--duration-fast) var(--ease-standard),
+    transform var(--duration-base) var(--ease-spring);
 }
 
 .task-row-toggle::after {
@@ -107,7 +148,7 @@
   transform: translateY(-10%) rotate(45deg) scale(0.6);
   transition:
     opacity var(--duration-fast) var(--ease-standard),
-    transform var(--duration-fast) var(--ease-standard);
+    transform var(--duration-base) var(--ease-spring);
 }
 
 .task-row-toggle:hover:not(:disabled)::before {
@@ -116,7 +157,8 @@
 
 .task-row-toggle:checked::before {
   border-color: var(--color-primary);
-  background: var(--color-primary);
+  background: var(--gradient-brand);
+  transform: scale(1.1);
 }
 
 .task-row-toggle:checked::after {
@@ -155,7 +197,7 @@
 @keyframes task-row-enter {
   from {
     opacity: 0;
-    transform: translateY(-0.25rem);
+    transform: translateY(0.5rem);
   }
 
   to {
@@ -167,6 +209,6 @@
 @keyframes task-row-leave {
   to {
     opacity: 0;
-    transform: translateX(0.75rem);
+    transform: translateX(1.5rem);
   }
 }

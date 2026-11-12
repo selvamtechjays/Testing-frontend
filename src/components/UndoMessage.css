@@ -16,7 +16,7 @@
   box-shadow: var(--shadow-overlay);
   font-weight: var(--font-weight-medium);
   transform: translateX(-50%);
-  animation: undo-message-enter var(--duration-base) var(--ease-standard);
+  animation: undo-message-enter var(--duration-base) var(--ease-spring) both;
 }
 
 .undo-message-action {
@@ -26,7 +26,7 @@
 @keyframes undo-message-enter {
   from {
     opacity: 0;
-    transform: translate(-50%, 0.75rem);
+    transform: translate(-50%, 1.5rem);
   }
 
   to {

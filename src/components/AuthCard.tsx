@@ -12,6 +12,10 @@ interface AuthCardProps {
 export function AuthCard({ heading, children, footer }: AuthCardProps) {
   return (
     <div className="auth">
+      <div className="auth-backdrop" aria-hidden="true">
+        <span className="auth-orb auth-orb--one" />
+        <span className="auth-orb auth-orb--two" />
+      </div>
       <div className="card auth-card">
         <h1 className="auth-heading">{heading}</h1>
         {children}
