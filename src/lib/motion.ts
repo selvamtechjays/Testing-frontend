@@ -11,6 +11,19 @@ export function applyMotionPreference(root: HTMLElement = document.documentEleme
 }
 
 /**
+ * Keeps <html data-reduced-motion> in step when the OS setting changes while the app is open.
+ * Returns an unsubscribe function; a no-op where the browser cannot report changes.
+ */
+export function watchMotionPreference(root: HTMLElement = document.documentElement): () => void {
+  if (typeof window.matchMedia !== 'function') return () => {};
+  const query = window.matchMedia(REDUCED_MOTION_QUERY);
+  if (typeof query.addEventListener !== 'function') return () => {};
+  const onChange = () => applyMotionPreference(root);
+  query.addEventListener('change', onChange);
+  return () => query.removeEventListener('change', onChange);
+}
+
+/**
  * How long a removed element should stay on screen to animate out, read from the
  * `--duration-base` token so CSS and JS never disagree. 0 means "remove at once":
  * reduced motion, or no stylesheet loaded (as under the unit-test DOM).

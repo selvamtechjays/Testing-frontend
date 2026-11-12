@@ -20,17 +20,30 @@ describe('App', () => {
     expect(screen.getAllByRole('main')).toHaveLength(1);
   });
 
-  it('offers no language control, logo, dark-mode switch or cookie prompt, and only Log out and Add as buttons (AC-8 AC-10 TS-9 TS-11)', async () => {
+  it('offers no language control, logo or cookie prompt, and only the theme toggle, Log out and Add as buttons (AC-8 AC-10 TS-9 TS-11, Task-21 AC-2)', async () => {
     await renderHome();
     expect(screen.queryByRole('combobox')).not.toBeInTheDocument();
     expect(screen.queryByRole('img')).not.toBeInTheDocument();
     expect(screen.queryByRole('switch')).not.toBeInTheDocument();
     expect(screen.queryByRole('checkbox')).not.toBeInTheDocument();
-    expect(screen.getAllByRole('button').map((button) => button.textContent)).toEqual([
-      'Log out',
-      'Add',
-    ]);
+    expect(
+      screen
+        .getAllByRole('button')
+        .map((button) => button.getAttribute('aria-label') ?? button.textContent),
+    ).toEqual(['Dark mode', 'Log out', 'Add']);
     expect(screen.queryByText(/cookie|analytics|privacy|terms/i)).not.toBeInTheDocument();
+  });
+});
+
+describe('App theme toggle (Task-21 AC-2)', () => {
+  it('shows the theme toggle on the signed-in home', async () => {
+    await renderHome();
+    expect(screen.getByRole('button', { name: 'Dark mode' })).toBeInTheDocument();
+  });
+
+  it.each(['/register', '/signin'])('shows the theme toggle at %s', async (route) => {
+    renderWithProviders(<App />, { route });
+    expect(await screen.findByRole('button', { name: 'Dark mode' })).toBeInTheDocument();
   });
 });
 

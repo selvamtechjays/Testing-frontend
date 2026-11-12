@@ -49,6 +49,7 @@ Let a visitor create an account with only a username and a password and go strai
 - On success the user is already signed in and is routed to PAGE-TASK-01.
 - Link to Sign In for existing users.
 - Client-side hints mirror the server rules (3 to 30 letters/numbers/underscores; 8+ chars). The server is authoritative. A strength indicator is not in v1 scope (DEC-027 predates DEC-040/046; not carried into the feature) — not designed.
+- Theme (Task-21): a sun/moon toggle in the header, on every screen, switches light and dark; the choice is kept on this device, and the default follows the device setting.
 
 ## Page States
 

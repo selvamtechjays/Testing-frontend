@@ -1,6 +1,11 @@
 // tier: unit
 import { afterEach, describe, expect, it, vi } from 'vitest';
-import { applyMotionPreference, exitDurationMs, prefersReducedMotion } from './motion';
+import {
+  applyMotionPreference,
+  exitDurationMs,
+  prefersReducedMotion,
+  watchMotionPreference,
+} from './motion';
 
 const stubMatchMedia = (matches: boolean) =>
   vi.stubGlobal('matchMedia', vi.fn().mockReturnValue({ matches }));
@@ -42,5 +47,37 @@ describe('motion', () => {
     root.style.setProperty('--duration-base', '200ms');
     stubMatchMedia(true);
     expect(exitDurationMs(root)).toBe(0);
+  });
+});
+
+describe('watchMotionPreference (Task-21 AC-5)', () => {
+  afterEach(() => {
+    vi.unstubAllGlobals();
+    delete document.documentElement.dataset.reducedMotion;
+  });
+
+  it('re-applies the preference when the OS setting changes while the app is open', () => {
+    let listener: (() => void) | undefined;
+    const query = {
+      matches: false,
+      addEventListener: (_: string, cb: () => void) => {
+        listener = cb;
+      },
+      removeEventListener: vi.fn(),
+    };
+    vi.stubGlobal('matchMedia', vi.fn().mockReturnValue(query));
+    const stop = watchMotionPreference();
+    query.matches = true;
+    listener?.();
+    expect(document.documentElement.dataset.reducedMotion).toBe('true');
+    stop();
+    expect(query.removeEventListener).toHaveBeenCalledWith('change', listener);
+  });
+
+  it('does nothing where the browser cannot report changes', () => {
+    vi.stubGlobal('matchMedia', undefined);
+    expect(() => watchMotionPreference()()).not.toThrow();
+    vi.stubGlobal('matchMedia', vi.fn().mockReturnValue({ matches: false }));
+    expect(() => watchMotionPreference()()).not.toThrow();
   });
 });
