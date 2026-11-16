@@ -103,4 +103,15 @@ export const copy = {
   clearFilters: 'Clear filters',
   filtersNoMatch: 'No tasks match your filters.',
   overdueSummary: (count: number | string) => `${count} overdue`,
+  hasNotes: 'Has notes',
+  notesButton: 'Notes',
+  notesButtonLabel: (title: string) => `Notes for ${title}`,
+  notesPanelLabel: (title: string) => `Notes panel for ${title}`,
+  notesTextLabel: (title: string) => `Notes for ${title}`,
+  notesCharsLeft: (count: number | string) =>
+    Number(count) === 1 ? '1 character left' : `${count} characters left`,
+  clearNotes: 'Clear notes',
+  keepNotes: 'Keep notes',
+  clearNotesConfirm: 'Clear these notes?',
+  notesNotSaved: 'Your changes to the notes were not saved.',
 } as const;

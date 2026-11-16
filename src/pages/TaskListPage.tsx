@@ -31,6 +31,7 @@ function Body() {
     editTitle,
     changeDueDate,
     changePriority,
+    changeNotes,
     startDelete,
     retrySearch,
     clearFilters,
@@ -50,6 +51,7 @@ function Body() {
       onEditTitle={editTitle}
       onChangeDueDate={changeDueDate}
       onChangePriority={changePriority}
+      onChangeNotes={changeNotes}
       onDelete={startDelete}
     />
   );

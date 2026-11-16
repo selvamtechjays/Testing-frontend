@@ -95,3 +95,57 @@ export const listTasksMatching = (tasks: Task[]) =>
   http.get('/api/tasks', ({ request }) =>
     HttpResponse.json(listBodyFor(tasks, new URL(request.url).searchParams)),
   );
+
+/** The server's cap, in UTF-16 units: `.length`, never code points (DEC-240). */
+const SERVER_NOTES_MAX = 1000;
+
+/** The notes rule and refusal messages exactly as the server applies them (plan section 3, DEC-240). */
+export const NOTES_MESSAGES = {
+  type: 'Notes must be text.',
+  tooLong: 'Notes can be at most 1000 characters.',
+} as const;
+
+/** What the server stores for a sent value: trimmed text, `''` and whitespace as null, or a refusal. */
+export function applyNotesRule(
+  sent: unknown,
+): { ok: true; notes: string | null } | { ok: false; message: string } {
+  if (sent === null || sent === undefined) return { ok: true, notes: null };
+  if (typeof sent !== 'string') return { ok: false, message: NOTES_MESSAGES.type };
+  const trimmed = sent.trim();
+  if (trimmed.length > SERVER_NOTES_MAX) return { ok: false, message: NOTES_MESSAGES.tooLong };
+  return { ok: true, notes: trimmed === '' ? null : trimmed };
+}
+
+const notesRefusal = (message: string) =>
+  HttpResponse.json(
+    {
+      error: {
+        code: 'VALIDATION',
+        message: 'Check the highlighted field.',
+        fields: { notes: message },
+      },
+    },
+    { status: 400 },
+  );
+
+/**
+ * PATCH /api/tasks/:id over a stored list: applies the notes rule, keeps what was stored (so a
+ * reload shows stored truth) and answers with the whole task. Search stays on titles (AC-4).
+ */
+export const updateTaskStoring = (stored: Task[]) =>
+  http.patch('/api/tasks/:id', async ({ request, params }) => {
+    const patch = (await request.json()) as Record<string, unknown>;
+    const task = stored.find((t) => t.id === params.id);
+    if (!task)
+      return HttpResponse.json(
+        { error: { code: 'NOT_FOUND', message: 'Not found.' } },
+        { status: 404 },
+      );
+    if ('notes' in patch) {
+      const checked = applyNotesRule(patch.notes);
+      if (!checked.ok) return notesRefusal(checked.message);
+      patch.notes = checked.notes;
+    }
+    Object.assign(task, patch);
+    return HttpResponse.json({ task });
+  });

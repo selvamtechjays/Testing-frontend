@@ -125,8 +125,10 @@
   color: var(--color-success);
 }
 
+/* Edit, Notes and Delete wrap under the title on a 360px screen rather than overflow. */
 .task-row-actions {
   display: flex;
+  flex-wrap: wrap;
   gap: var(--space-2);
   margin-left: auto;
 }

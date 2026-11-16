@@ -12,6 +12,7 @@ export function buildTask(overrides: Partial<Task> = {}): Task {
     createdAt: '2026-11-07T09:00:00.000Z',
     dueDate: null,
     priority: 'medium',
+    notes: null,
     ...overrides,
   };
 }
