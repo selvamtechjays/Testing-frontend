@@ -58,14 +58,17 @@ describe('task list: loading and showing tasks', { timeout: 15000 }, () => {
     );
     await screen.findByText('Plan launch');
     expect(rowTitles()).toEqual(['Plan launch', 'Pay hosting invoice', 'Send logo']);
-    expect(screen.getAllByText('Pending')).toHaveLength(2);
-    expect(screen.getAllByText('Completed')).toHaveLength(1);
+    const list = within(screen.getByRole('list', { name: 'Your tasks' }));
+    expect(list.getAllByText('Pending')).toHaveLength(2);
+    expect(list.getAllByText('Completed')).toHaveLength(1);
   });
 
   it('keeps completed tasks visible after a reload (AC-9 TS-14)', async () => {
     await renderList(listTasksWith([buildTask({ title: 'Done thing', status: 'completed' })]));
     expect(await screen.findByText('Done thing')).toBeInTheDocument();
-    expect(screen.getByText('Completed')).toBeInTheDocument();
+    expect(
+      within(screen.getByRole('list', { name: 'Your tasks' })).getByText('Completed'),
+    ).toBeInTheDocument();
   });
 
   it('shows an empty-list prompt to add a first task (AC-3 TS-2)', async () => {
@@ -130,7 +133,9 @@ describe('task list: adding a task', { timeout: 15000 }, () => {
     expect(within(screen.getAllByRole('listitem')[0]).getByText('Pending')).toBeInTheDocument();
     expect(screen.queryByRole('progressbar')).not.toBeInTheDocument();
     release();
-    await waitFor(() => expect(body).toEqual({ title: 'Send brand colours to Techjays' }));
+    await waitFor(() =>
+      expect(body).toEqual({ title: 'Send brand colours to Techjays', priority: 'medium' }),
+    );
     expect(rowTitles()).toEqual(['Send brand colours to Techjays', 'Older task']);
     expect(screen.queryByText(SAVE_FAILED)).not.toBeInTheDocument();
     expect(screen.getByLabelText('New task')).toHaveValue('');

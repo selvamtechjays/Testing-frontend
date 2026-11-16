@@ -1,0 +1,12 @@
+/* Select: border, radius, hover, focus and disabled come from the shared control rules in App.css. */
+.select-field {
+  margin-bottom: 0;
+}
+
+.select-field-control {
+  cursor: pointer;
+}
+
+.select-field-control:disabled {
+  cursor: not-allowed;
+}

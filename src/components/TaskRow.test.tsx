@@ -7,11 +7,20 @@ import { TaskList } from './TaskList';
 import { TaskRow } from './TaskRow';
 
 const noop = () => Promise.resolve(true);
+const TODAY = '2026-11-16';
 
 function renderRow(task = buildTask()) {
   return render(
     <ul>
-      <TaskRow task={task} onToggle={noop} onEditTitle={noop} onDelete={noop} />
+      <TaskRow
+        task={task}
+        today={TODAY}
+        onToggle={noop}
+        onEditTitle={noop}
+        onChangeDueDate={noop}
+        onChangePriority={noop}
+        onDelete={noop}
+      />
     </ul>,
   );
 }
@@ -46,15 +55,17 @@ describe('TaskRow', () => {
     expect(container.querySelector('script')).toBeNull();
   });
 
-  it('offers no description, notes, due date or priority control; only tick, Edit and Delete (AC-8 BR-1 TS-11)', () => {
+  it('offers no description or notes; only tick, Edit, Delete and the date and priority controls (AC-8 BR-1 TS-11)', () => {
     renderRow(buildTask());
     expect(screen.queryByRole('textbox')).not.toBeInTheDocument();
     expect(screen.getAllByRole('checkbox')).toHaveLength(1);
     expect(screen.getAllByRole('button').map((button) => button.textContent)).toEqual([
       'Edit',
       'Delete',
+      'Clear date',
     ]);
-    expect(screen.queryByText(/due|priority|notes|description/i)).not.toBeInTheDocument();
+    expect(screen.getAllByRole('combobox')).toHaveLength(1);
+    expect(screen.queryByText(/notes|description/i)).not.toBeInTheDocument();
   });
 });
 
@@ -65,7 +76,17 @@ describe('TaskList', () => {
       buildTask({ id: 'm', title: 'Pay hosting invoice', status: 'pending' }),
       buildTask({ id: 'o', title: 'Send logo', status: 'completed' }),
     ];
-    render(<TaskList tasks={tasks} onToggle={noop} onEditTitle={noop} onDelete={noop} />);
+    render(
+      <TaskList
+        tasks={tasks}
+        today={TODAY}
+        onToggle={noop}
+        onEditTitle={noop}
+        onChangeDueDate={noop}
+        onChangePriority={noop}
+        onDelete={noop}
+      />,
+    );
     expect(listedTitles()).toEqual(['Plan launch', 'Pay hosting invoice', 'Send logo']);
     expect(screen.getByRole('list', { name: 'Your tasks' })).toBeInTheDocument();
   });

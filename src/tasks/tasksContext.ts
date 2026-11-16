@@ -1,5 +1,6 @@
 import { createContext } from 'react';
-import type { Task } from '../api/types';
+import type { NewTask } from '../api/tasks';
+import type { ListFilters, Task, TaskPriority } from '../api/types';
 
 /** Which body the task list shows. */
 export type ListStatus =
@@ -18,12 +19,28 @@ export interface TasksValue {
   searching: boolean;
   /** True when the list on screen is the result of a non-empty search. */
   searchApplied: boolean;
+  /** The status, priority, due and sort choices; they apply at once and are remembered per user. */
+  filters: ListFilters;
+  /** Changes one choice: the list reloads at once and the choice is remembered. */
+  setFilter: <K extends keyof ListFilters>(key: K, value: ListFilters[K]) => void;
+  /** Back to the defaults; the search text is kept. */
+  clearFilters: () => void;
+  /** True when the list on screen is the result of a non-default status, priority or due filter (sort alone narrows nothing). */
+  filtersApplied: boolean;
+  /** The user's own calendar date, YYYY-MM-DD, as of the last request. */
+  today: string;
+  /** How many of the user's pending tasks are overdue, whatever filters or search are on. */
+  overdueCount: number;
   /** Shows the task at the top at once and saves in the background; resolves false if the save failed. */
-  addTask: (title: string) => Promise<boolean>;
+  addTask: (input: NewTask) => Promise<boolean>;
   /** Ticks a Pending task or unticks a Completed one; the row keeps its place. */
   toggleStatus: (id: string) => Promise<boolean>;
   /** Changes the title at once and saves it; a failed save restores the stored title. */
   editTitle: (id: string, title: string) => Promise<boolean>;
+  /** Changes the due date (null clears it) at once and saves it; a failed save restores the stored date. */
+  changeDueDate: (id: string, dueDate: string | null) => Promise<boolean>;
+  /** Changes the priority at once and saves it; a failed save restores the stored priority. */
+  changePriority: (id: string, priority: TaskPriority) => Promise<boolean>;
   /** Removes the task at once and offers Undo for 5 seconds; the delete is sent when the window ends. */
   startDelete: (id: string) => Promise<boolean>;
   /** Puts the pending deletion back, in its place, without any request. */

@@ -98,11 +98,13 @@ export function usePendingDelete({ commit, listRef }: PendingStore) {
     [run, commit, listRef, restore],
   );
 
-  const undo = useCallback(() => {
+  /** Puts the held deletion back; returns its id, or null when nothing was being held. */
+  const undo = useCallback((): string | null => {
     const record = active.current;
-    if (!record) return;
+    if (!record) return null;
     record.cancel();
     restore(record.task);
+    return record.task.id;
   }, [restore]);
 
   // Closing the page or leaving the list during the window makes the deletion final (ASM-026).

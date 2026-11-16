@@ -1,5 +1,5 @@
 // tier: component
-import { render, screen } from '@testing-library/react';
+import { fireEvent, render, screen } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { useState } from 'react';
 import { describe, expect, it, vi } from 'vitest';
@@ -7,13 +7,23 @@ import type { Task } from '../api/types';
 import { buildTask } from '../test/builders/task';
 import { TaskRow } from './TaskRow';
 
+const noop = () => Promise.resolve(true);
+
 function setup(task: Task = buildTask({ id: 't1', title: 'Renew domain' })) {
   const onToggle = vi.fn(() => Promise.resolve(true));
   const onEditTitle = vi.fn(() => Promise.resolve(true));
   const onDelete = vi.fn(() => Promise.resolve(true));
   render(
     <ul>
-      <TaskRow task={task} onToggle={onToggle} onEditTitle={onEditTitle} onDelete={onDelete} />
+      <TaskRow
+        task={task}
+        today="2026-11-16"
+        onToggle={onToggle}
+        onEditTitle={onEditTitle}
+        onChangeDueDate={noop}
+        onChangePriority={noop}
+        onDelete={onDelete}
+      />
     </ul>,
   );
   return { onToggle, onEditTitle, onDelete, task };
@@ -186,6 +196,9 @@ describe('TaskRow title edit', () => {
         <ul>
           <TaskRow
             task={task}
+            today="2026-11-16"
+            onChangeDueDate={() => Promise.resolve(true)}
+            onChangePriority={() => Promise.resolve(true)}
             onToggle={() => Promise.resolve(true)}
             onDelete={() => Promise.resolve(true)}
             onEditTitle={(_, title) => {
@@ -215,5 +228,192 @@ describe('TaskRow title edit', () => {
     expect(editInput()).toHaveFocus();
     await userEvent.type(editInput(), '!{Enter}');
     expect(onEditTitle).toHaveBeenCalledWith('t1', 'Renew domain!');
+  });
+});
+
+describe('TaskRow due date and priority (Task-23)', () => {
+  const TODAY = '2026-11-16';
+
+  function setupDated(task: Task) {
+    const onChangeDueDate = vi.fn(() => Promise.resolve(true));
+    const onChangePriority = vi.fn(() => Promise.resolve(true));
+    const noop = () => Promise.resolve(true);
+    render(
+      <ul>
+        <TaskRow
+          task={task}
+          today={TODAY}
+          onToggle={noop}
+          onEditTitle={noop}
+          onChangeDueDate={onChangeDueDate}
+          onChangePriority={onChangePriority}
+          onDelete={noop}
+        />
+      </ul>,
+    );
+    return { onChangeDueDate, onChangePriority };
+  }
+
+  it('shows the priority as a word on every row (AC-10)', () => {
+    setupDated(buildTask({ priority: 'high' }));
+    expect(screen.getByText('High priority')).toBeInTheDocument();
+  });
+
+  it('says Overdue for a pending task past its date (AC-10)', () => {
+    setupDated(buildTask({ status: 'pending', dueDate: '2026-11-10' }));
+    expect(screen.getByText('Overdue')).toBeInTheDocument();
+  });
+
+  it('never says Overdue for a completed task, and shows its date instead (AC-10)', () => {
+    setupDated(buildTask({ status: 'completed', dueDate: '2026-11-10' }));
+    expect(screen.queryByText('Overdue')).not.toBeInTheDocument();
+    expect(screen.getByText('Due Nov 10, 2026')).toBeInTheDocument();
+  });
+
+  it('says Due today for a task due today (AC-10)', () => {
+    setupDated(buildTask({ dueDate: TODAY }));
+    expect(screen.getByText('Due today')).toBeInTheDocument();
+  });
+
+  it('shows the stored day for a later date with no shifting (AC-9)', () => {
+    setupDated(buildTask({ dueDate: '2026-11-20' }));
+    expect(screen.getByText('Due Nov 20, 2026')).toBeInTheDocument();
+    expect(screen.getByLabelText('Due date for Task', { exact: false })).toHaveValue('2026-11-20');
+  });
+
+  it('shows no due text for a task without a date', () => {
+    setupDated(buildTask({ dueDate: null }));
+    expect(screen.queryByText(/^Due /)).not.toBeInTheDocument();
+    expect(screen.queryByText('Overdue')).not.toBeInTheDocument();
+  });
+
+  it('saves a full date once the box is left, not while it is typed (AC-14)', () => {
+    const task = buildTask({ id: 't9', title: 'Pay rent', dueDate: null });
+    const { onChangeDueDate } = setupDated(task);
+    const box = screen.getByLabelText('Due date for Pay rent');
+    fireEvent.change(box, { target: { value: '0002-11-25' } });
+    fireEvent.change(box, { target: { value: '0020-11-25' } });
+    fireEvent.change(box, { target: { value: '2026-11-25' } });
+    expect(onChangeDueDate).not.toHaveBeenCalled();
+    fireEvent.blur(box);
+    expect(onChangeDueDate).toHaveBeenCalledTimes(1);
+    expect(onChangeDueDate).toHaveBeenCalledWith('t9', '2026-11-25');
+  });
+
+  it('refuses a date past the five-year limit with a linked message and saves nothing (REV-ERR-0e8afdf9)', () => {
+    const task = buildTask({ id: 't9', title: 'Pay rent', dueDate: '2026-11-25' });
+    const { onChangeDueDate } = setupDated(task);
+    const box = screen.getByLabelText('Due date for Pay rent');
+    fireEvent.change(box, { target: { value: '2031-11-17' } });
+    fireEvent.blur(box);
+    const alert = screen.getByRole('alert');
+    expect(alert).toHaveTextContent('A due date can be at most five years ahead.');
+    expect(box).toHaveAttribute('aria-invalid', 'true');
+    expect(box).toHaveAttribute('aria-describedby', alert.id);
+    expect(onChangeDueDate).not.toHaveBeenCalled();
+    fireEvent.change(box, { target: { value: '2031-11-16' } });
+    expect(screen.queryByRole('alert')).not.toBeInTheDocument();
+    fireEvent.blur(box);
+    expect(onChangeDueDate).toHaveBeenCalledWith('t9', '2031-11-16');
+  });
+
+  it('drops the too-far message when the stored date changes underneath it, as with Clear date (REV-CORR-e5cac55f)', async () => {
+    function Stateful() {
+      const [task, setTask] = useState(
+        buildTask({ id: 't9', title: 'Pay rent', dueDate: '2026-11-25' }),
+      );
+      return (
+        <ul>
+          <TaskRow
+            task={task}
+            today={TODAY}
+            onToggle={noop}
+            onEditTitle={noop}
+            onChangeDueDate={(_id, dueDate) => {
+              setTask({ ...task, dueDate });
+              return Promise.resolve(true);
+            }}
+            onChangePriority={noop}
+            onDelete={noop}
+          />
+        </ul>
+      );
+    }
+    render(<Stateful />);
+    const box = screen.getByLabelText('Due date for Pay rent');
+    fireEvent.change(box, { target: { value: '2031-11-17' } });
+    fireEvent.blur(box);
+    expect(screen.getByRole('alert')).toBeInTheDocument();
+    await userEvent.click(screen.getByRole('button', { name: 'Clear date for Pay rent' }));
+    expect(screen.queryByRole('alert')).not.toBeInTheDocument();
+    expect(box).toHaveValue('');
+    expect(box).not.toHaveAttribute('aria-invalid');
+  });
+
+  it('caps the row date at five years from the today it is given (DEC-211)', () => {
+    setupDated(buildTask({ title: 'Pay rent' }));
+    expect(screen.getByLabelText('Due date for Pay rent')).toHaveAttribute('max', '2031-11-16');
+  });
+
+  it('saves a full date on Enter (AC-14 AC-15)', () => {
+    const task = buildTask({ id: 't9', title: 'Pay rent', dueDate: null });
+    const { onChangeDueDate } = setupDated(task);
+    const box = screen.getByLabelText('Due date for Pay rent');
+    fireEvent.change(box, { target: { value: '2026-11-25' } });
+    fireEvent.keyDown(box, { key: 'Enter' });
+    expect(onChangeDueDate).toHaveBeenCalledWith('t9', '2026-11-25');
+  });
+
+  it('puts the stored date back when the box is left half-typed or emptied (AC-3 AC-14)', () => {
+    const task = buildTask({ id: 't9', title: 'Pay rent', dueDate: '2026-11-25' });
+    const { onChangeDueDate } = setupDated(task);
+    const box = screen.getByLabelText('Due date for Pay rent');
+    fireEvent.change(box, { target: { value: '0002-11-25' } });
+    fireEvent.blur(box);
+    expect(box).toHaveValue('2026-11-25');
+    fireEvent.change(box, { target: { value: '' } });
+    fireEvent.blur(box);
+    expect(box).toHaveValue('2026-11-25');
+    expect(onChangeDueDate).not.toHaveBeenCalled();
+  });
+
+  it('clears the date with Clear date, which is off when there is no date (AC-3 AC-14)', async () => {
+    const task = buildTask({ id: 't9', title: 'Pay rent', dueDate: '2026-11-25' });
+    const { onChangeDueDate } = setupDated(task);
+    await userEvent.click(screen.getByRole('button', { name: 'Clear date for Pay rent' }));
+    expect(onChangeDueDate).toHaveBeenCalledWith('t9', null);
+  });
+
+  it('disables Clear date when the task has no date', () => {
+    setupDated(buildTask({ title: 'Pay rent', dueDate: null }));
+    expect(screen.getByRole('button', { name: 'Clear date for Pay rent' })).toBeDisabled();
+  });
+
+  it('changes the priority the moment it is picked (AC-14)', async () => {
+    const task = buildTask({ id: 't9', title: 'Pay rent', priority: 'medium' });
+    const { onChangePriority } = setupDated(task);
+    await userEvent.selectOptions(
+      screen.getByRole('combobox', { name: 'Priority for Pay rent' }),
+      'low',
+    );
+    expect(onChangePriority).toHaveBeenCalledWith('t9', 'low');
+  });
+
+  it('is operable by keyboard: Tab reaches the date, Clear date and priority (AC-15)', async () => {
+    setupDated(buildTask({ title: 'Pay rent', dueDate: '2026-11-25' }));
+    await userEvent.tab(); // checkbox
+    await userEvent.tab(); // Edit
+    await userEvent.tab(); // Delete
+    await userEvent.tab(); // date input
+    expect(screen.getByLabelText('Due date for Pay rent')).toHaveFocus();
+    await userEvent.tab(); // Clear date
+    await userEvent.tab();
+    expect(screen.getByRole('combobox', { name: 'Priority for Pay rent' })).toHaveFocus();
+  });
+
+  it('turns the controls off while the add is unsaved', () => {
+    setupDated(buildTask({ id: 'temp-1', title: 'Pay rent' }));
+    expect(screen.getByLabelText('Due date for Pay rent')).toBeDisabled();
+    expect(screen.getByRole('combobox', { name: 'Priority for Pay rent' })).toBeDisabled();
   });
 });

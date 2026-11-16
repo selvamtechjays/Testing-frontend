@@ -83,10 +83,16 @@ describe('task list: tick and untick', { timeout: 15000 }, () => {
     const first = await open();
     await userEvent.click(within(rowFor('Plan launch')).getByRole('checkbox'));
     await userEvent.click(within(rowFor('Pay hosting invoice')).getByRole('checkbox'));
-    await waitFor(() => expect(screen.getAllByText('Completed')).toHaveLength(3));
+    await waitFor(() =>
+      expect(
+        within(screen.getByRole('list', { name: 'Your tasks' })).getAllByText('Completed'),
+      ).toHaveLength(3),
+    );
     first.unmount();
     await open();
-    expect(screen.getAllByText('Completed')).toHaveLength(3);
+    expect(
+      within(screen.getByRole('list', { name: 'Your tasks' })).getAllByText('Completed'),
+    ).toHaveLength(3);
     expect(titles()).toHaveLength(3);
   });
 
