@@ -1,23 +1,81 @@
 .auth {
   max-width: var(--size-auth);
   margin: 0 auto;
-  animation: fade-in var(--duration-base) var(--ease-standard);
+}
+
+/* Ambient backdrop: two blurred brand-colour orbs drifting slowly behind the card */
+.auth-backdrop {
+  position: fixed;
+  inset: 0;
+  z-index: -1;
+  overflow: hidden;
+  pointer-events: none;
+}
+
+.auth-orb {
+  position: absolute;
+  width: 24rem;
+  height: 24rem;
+  border-radius: var(--radius-full);
+  opacity: var(--opacity-ambient);
+  filter: blur(var(--blur-orb));
+  animation: orb-drift calc(var(--duration-slow) * 30) var(--ease-standard) infinite alternate;
+}
+
+.auth-orb--one {
+  top: -6rem;
+  left: -8rem;
+  background: var(--color-primary);
+}
+
+.auth-orb--two {
+  right: -8rem;
+  bottom: -6rem;
+  background: var(--color-accent);
+  animation-direction: alternate-reverse;
+}
+
+:root[data-reduced-motion='true'] .auth-orb {
+  animation: none;
 }
 
 .auth-card {
   margin-bottom: var(--space-4);
+  animation: auth-card-enter var(--duration-slow) var(--ease-spring) both;
 }
 
 .auth-heading {
   margin-bottom: var(--space-5);
-  font-size: var(--font-size-xl);
-  line-height: var(--line-height-xl);
+  font-size: var(--font-size-2xl);
+  line-height: var(--line-height-2xl);
 }
 
 .auth-footer {
   margin: 0;
   color: var(--color-muted);
   text-align: center;
+}
+
+@keyframes auth-card-enter {
+  from {
+    opacity: 0;
+    transform: scale(0.98);
+  }
+
+  to {
+    opacity: 1;
+    transform: none;
+  }
+}
+
+@keyframes orb-drift {
+  from {
+    transform: translate(0, 0);
+  }
+
+  to {
+    transform: translate(4rem, 3rem);
+  }
 }
 
 @media (min-width: 48rem) {

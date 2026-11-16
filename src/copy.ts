@@ -48,4 +48,7 @@ export const copy = {
   deleteButton: 'Delete',
   taskDeleted: 'Task deleted',
   undo: 'Undo',
+  themeToggle: 'Dark mode',
+  loadFailed: 'This page could not be loaded. Check your connection and try again.',
+  reload: 'Reload',
 } as const;

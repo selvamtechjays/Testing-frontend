@@ -17,11 +17,16 @@
     background-color var(--duration-fast) var(--ease-standard),
     border-color var(--duration-fast) var(--ease-standard),
     color var(--duration-fast) var(--ease-standard),
-    transform var(--duration-fast) var(--ease-standard);
+    box-shadow var(--duration-fast) var(--ease-standard),
+    transform var(--duration-fast) var(--ease-spring);
+}
+
+.button:hover:not(:disabled) {
+  transform: translateY(-0.0625rem);
 }
 
 .button:active:not(:disabled) {
-  transform: translateY(0.0625rem);
+  transform: translateY(0);
 }
 
 .button:disabled {
@@ -37,19 +42,19 @@
 
 /* primary: the one main action on a screen */
 .button--primary {
-  border-color: var(--color-primary);
-  background: var(--color-primary);
+  border-color: transparent;
+  background: var(--gradient-brand);
   color: var(--color-on-primary);
 }
 
 .button--primary:hover:not(:disabled) {
-  border-color: var(--color-primary-hover);
-  background: var(--color-primary-hover);
+  background: var(--gradient-brand-hover);
+  box-shadow: var(--shadow-hover);
 }
 
 .button--primary:active:not(:disabled) {
-  border-color: var(--color-primary-active);
-  background: var(--color-primary-active);
+  background: var(--gradient-brand-active);
+  box-shadow: none;
 }
 
 /* secondary: everything else */

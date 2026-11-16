@@ -11,7 +11,10 @@ export function AppShell({ children, headerActions }: AppShellProps) {
   return (
     <div className="shell">
       <header className="shell-header">
-        <span className="shell-brand">{copy.appName}</span>
+        <span className="shell-brand">
+          <span className="shell-mark" aria-hidden="true" />
+          {copy.appName}
+        </span>
         {headerActions ? <div className="shell-actions">{headerActions}</div> : null}
       </header>
       <main className="shell-main">{children}</main>

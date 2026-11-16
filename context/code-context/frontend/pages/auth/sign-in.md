@@ -48,6 +48,7 @@ Let a registered tester sign in with username and password and land on their own
 - Wrong credentials: one generic error that never says which field was wrong; the user may retry with no lockout.
 - On success route to PAGE-TASK-01.
 - Link to Register. No "Forgot password" and no "Remember me" (DEC-045, DEC-048).
+- Theme (Task-21): a sun/moon toggle in the header, on every screen, switches light and dark; the choice is kept on this device, and the default follows the device setting.
 
 ## Page States
 

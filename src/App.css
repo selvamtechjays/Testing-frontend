@@ -16,14 +16,33 @@
   gap: var(--space-4);
   padding: var(--space-3) var(--space-4);
   border-bottom: 1px solid var(--color-divider);
-  background: var(--color-surface);
+  background: var(--color-header-bg);
+  -webkit-backdrop-filter: blur(var(--blur-header));
+  backdrop-filter: blur(var(--blur-header));
 }
 
 .shell-brand {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-2);
   font-size: var(--font-size-lg);
   line-height: var(--line-height-lg);
   font-weight: var(--font-weight-bold);
-  letter-spacing: -0.01em;
+  letter-spacing: -0.02em;
+}
+
+.shell-mark {
+  width: 1.5rem;
+  height: 1.5rem;
+  border-radius: var(--radius-sm);
+  background: var(--gradient-brand);
+  box-shadow: var(--shadow-raised);
+}
+
+.shell-actions {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
 }
 
 .shell-main {
@@ -33,13 +52,27 @@
   padding: var(--space-5) var(--space-4) var(--space-6);
 }
 
+/* Each screen rises in as it mounts */
+.shell-main > *:not(.auth) {
+  animation: page-enter var(--duration-slow) var(--ease-emphasized) both;
+}
+
 /* Type */
 h1 {
   margin: 0 0 var(--space-2);
-  font-size: var(--font-size-2xl);
-  line-height: var(--line-height-2xl);
+  font-size: var(--font-size-3xl);
+  line-height: var(--line-height-3xl);
   font-weight: var(--font-weight-bold);
-  letter-spacing: -0.02em;
+  letter-spacing: -0.03em;
+}
+
+/* Page title: brand gradient text (both ends measured AA against the page background) */
+.page-header h1 {
+  background: var(--gradient-brand);
+  -webkit-background-clip: text;
+  background-clip: text;
+  -webkit-text-fill-color: transparent;
+  color: var(--color-primary);
 }
 
 .page-header {
@@ -99,7 +132,9 @@ input {
   border-radius: var(--radius-sm);
   background: var(--color-surface);
   color: var(--color-text);
-  transition: border-color var(--duration-fast) var(--ease-standard);
+  transition:
+    border-color var(--duration-fast) var(--ease-standard),
+    box-shadow var(--duration-base) var(--ease-standard);
 }
 
 input:hover {
@@ -108,6 +143,7 @@ input:hover {
 
 input:focus-visible {
   border-color: var(--color-primary);
+  box-shadow: var(--shadow-focus-glow);
 }
 
 input[aria-invalid='true'] {
@@ -155,6 +191,18 @@ input:disabled {
   border-color: var(--color-success);
   background: var(--color-success-subtle);
   color: var(--color-success);
+}
+
+@keyframes page-enter {
+  from {
+    opacity: 0;
+    transform: translateY(0.5rem);
+  }
+
+  to {
+    opacity: 1;
+    transform: none;
+  }
 }
 
 @keyframes fade-in {
