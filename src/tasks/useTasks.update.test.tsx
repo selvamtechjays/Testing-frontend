@@ -316,3 +316,184 @@ describe('useTasks quick successive changes', () => {
     expect(view(hook)).toEqual(['a:Alpha:completed']);
   });
 });
+
+describe('useTasks due date and priority (Task-23)', () => {
+  const dated = buildTask({ id: 'd', title: 'Dated', dueDate: '2026-11-20', priority: 'low' });
+
+  it('shows a new date at once and sends only the date (AC-14 AC-3)', async () => {
+    const hook = await setup([dated]);
+    const gates = gatedPatch();
+    let done: Promise<boolean> | undefined;
+    act(() => {
+      done = hook.result.current.list.changeDueDate('d', '2026-12-01');
+    });
+    expect(hook.result.current.list.tasks[0].dueDate).toBe('2026-12-01');
+    await waitFor(() => expect(gates).toHaveLength(1));
+    expect(gates[0].body).toEqual({ dueDate: '2026-12-01' });
+    await act(async () => {
+      gates[0].release(200);
+      await done;
+    });
+    expect(hook.result.current.notice.message).toBeNull();
+  });
+
+  it('clears the date by sending null (AC-3)', async () => {
+    const hook = await setup([dated]);
+    const gates = gatedPatch();
+    let done: Promise<boolean> | undefined;
+    act(() => {
+      done = hook.result.current.list.changeDueDate('d', null);
+    });
+    expect(hook.result.current.list.tasks[0].dueDate).toBeNull();
+    await waitFor(() => expect(gates[0]?.body).toEqual({ dueDate: null }));
+    await act(async () => {
+      gates[0].release(200);
+      await done;
+    });
+  });
+
+  it('sends only the priority when it changes (AC-14)', async () => {
+    const hook = await setup([dated]);
+    const gates = gatedPatch();
+    let done: Promise<boolean> | undefined;
+    act(() => {
+      done = hook.result.current.list.changePriority('d', 'high');
+    });
+    expect(hook.result.current.list.tasks[0].priority).toBe('high');
+    await waitFor(() => expect(gates[0]?.body).toEqual({ priority: 'high' }));
+    await act(async () => {
+      gates[0].release(200);
+      await done;
+    });
+  });
+
+  it('restores the confirmed date and priority and shows the message on a failed save (AC-14)', async () => {
+    const hook = await setup([dated]);
+    server.use(
+      http.patch('/api/tasks/:id', () => HttpResponse.json(serverErrorBody, { status: 500 })),
+    );
+    await act(async () => {
+      await hook.result.current.list.changeDueDate('d', '2027-01-01');
+      await hook.result.current.list.changePriority('d', 'high');
+    });
+    expect(hook.result.current.list.tasks[0]).toMatchObject({
+      dueDate: '2026-11-20',
+      priority: 'low',
+    });
+    expect(hook.result.current.notice.message).toBe(SAVE_FAILED);
+  });
+
+  it('a task with no date ends with no date when two quick date changes both fail (AC-14)', async () => {
+    const undated = buildTask({ id: 'u', title: 'Undated', dueDate: null });
+    const hook = await setup([undated]);
+    const gates = gatedPatch();
+    let first: Promise<boolean> | undefined;
+    let second: Promise<boolean> | undefined;
+    act(() => {
+      first = hook.result.current.list.changeDueDate('u', '2027-01-01');
+    });
+    act(() => {
+      second = hook.result.current.list.changeDueDate('u', '2027-02-02');
+    });
+    await waitFor(() => expect(gates).toHaveLength(2));
+    await act(async () => {
+      gates[0].release(500);
+      await first;
+    });
+    await act(async () => {
+      gates[1].release(500);
+      await second;
+    });
+    expect(hook.result.current.list.tasks[0].dueDate).toBeNull();
+    expect(hook.result.current.notice.message).toBe(SAVE_FAILED);
+  });
+
+  it('makes no request when the value is unchanged (AC-14)', async () => {
+    const hook = await setup([dated]);
+    let calls = 0;
+    server.use(
+      http.patch('/api/tasks/:id', () => {
+        calls += 1;
+        return HttpResponse.json({ task: dated });
+      }),
+    );
+    await act(async () => {
+      await hook.result.current.list.changeDueDate('d', '2026-11-20');
+      await hook.result.current.list.changePriority('d', 'low');
+    });
+    expect(calls).toBe(0);
+  });
+});
+
+describe('useTasks filters (Task-23)', () => {
+  const FILTERS_KEY = 'tasknest-filters:u-1';
+  const userWrapper = ({ children }: { children: ReactNode }) => (
+    <FailureNoticeProvider>
+      <TasksProvider userId="u-1">{children}</TasksProvider>
+    </FailureNoticeProvider>
+  );
+
+  it('applies a filter change with no debounce and saves it under the user key (AC-11 AC-12)', async () => {
+    window.localStorage.clear();
+    const urls: string[] = [];
+    server.use(
+      http.get('/api/tasks', ({ request }) => {
+        urls.push(request.url);
+        return HttpResponse.json({ tasks: [] });
+      }),
+    );
+    const hook = renderHook(() => useTasks(), { wrapper: userWrapper });
+    await waitFor(() => expect(hook.result.current.status).not.toBe('loading'));
+    act(() => hook.result.current.setFilter('priority', 'high'));
+    // The search pause is 300 ms; a filter that waited for even that long would miss this window.
+    await waitFor(() => expect(urls.some((u) => u.includes('priority=high'))).toBe(true), {
+      timeout: 250,
+    });
+    expect(JSON.parse(window.localStorage.getItem(FILTERS_KEY) ?? '{}')).toMatchObject({
+      priority: 'high',
+    });
+    expect(hook.result.current.filtersApplied).toBe(true);
+    window.localStorage.clear();
+  });
+
+  it('clearFilters restores the defaults and keeps the search text (AC-11)', async () => {
+    window.localStorage.clear();
+    server.use(listTasksWith([]));
+    const hook = renderHook(() => useTasks(), { wrapper: userWrapper });
+    await waitFor(() => expect(hook.result.current.status).not.toBe('loading'));
+    act(() => {
+      hook.result.current.setSearch('milk');
+      hook.result.current.setFilter('sort', 'due');
+    });
+    act(() => hook.result.current.clearFilters());
+    expect(hook.result.current.filters).toEqual({
+      status: 'all',
+      priority: 'all',
+      due: 'any',
+      sort: 'newest',
+    });
+    expect(hook.result.current.search).toBe('milk');
+    window.localStorage.clear();
+  });
+
+  it('keeps the overdue count through a delete that is undone (DEC-219)', async () => {
+    const overdueRow = buildTask({ id: 'o', title: 'Late', dueDate: '2000-01-01' });
+    server.use(
+      http.get('/api/tasks', () => HttpResponse.json({ tasks: [overdueRow], overdueCount: 1 })),
+    );
+    const hook = renderHook(() => ({ list: useTasks(), notice: useFailureNotice() }), { wrapper });
+    await waitFor(() => expect(hook.result.current.list.status).not.toBe('loading'));
+    expect(hook.result.current.list.overdueCount).toBe(1);
+    let held: Promise<boolean> | undefined;
+    act(() => {
+      held = hook.result.current.list.startDelete('o');
+    });
+    expect(hook.result.current.list.overdueCount).toBe(1);
+    act(() => hook.result.current.list.undoDelete());
+    await act(async () => {
+      await held;
+    });
+    expect(hook.result.current.list.overdueCount).toBe(1);
+    expect(hook.result.current.list.tasks).toHaveLength(1);
+  });
+});

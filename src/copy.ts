@@ -1,3 +1,15 @@
+import { PRIORITIES, type TaskPriority } from './api/types';
+
+/** The priority choices, in order, with their labels: the one list every priority control uses. */
+export const PRIORITY_OPTIONS: ReadonlyArray<{ value: TaskPriority; label: string }> =
+  PRIORITIES.map((value) => ({
+    value,
+    label: { low: 'Low', medium: 'Medium', high: 'High' }[value],
+  }));
+
+const priorityLabel = (priority: string) =>
+  PRIORITY_OPTIONS.find((option) => option.value === priority)?.label ?? 'Medium';
+
 /** Single source of English UI text. Screens import from here; no i18n library, no language control. */
 export const copy = {
   appName: 'TaskNest',
@@ -57,4 +69,38 @@ export const copy = {
   retry: 'Retry',
   searchResultCount: (count: number | string) =>
     Number(count) === 1 ? '1 task found.' : `${count} tasks found.`,
+  dueDateLabel: 'Due date',
+  priorityLabel: 'Priority',
+  priorityLow: priorityLabel('low'),
+  priorityMedium: priorityLabel('medium'),
+  priorityHigh: priorityLabel('high'),
+  priorityWord: (priority: string) => `${priorityLabel(priority)} priority`,
+  dueDateTooFar: 'A due date can be at most five years ahead.',
+  dueDateIncomplete: 'Enter the whole date, or clear it.',
+  dueOverdue: 'Overdue',
+  dueToday: 'Due today',
+  dueOn: (date: string) => `Due ${date}`,
+  clearDate: 'Clear date',
+  rowDueDateLabel: (title: string) => `Due date for ${title}`,
+  rowClearDateLabel: (title: string) => `Clear date for ${title}`,
+  rowPriorityLabel: (title: string) => `Priority for ${title}`,
+  filtersGroupLabel: 'Filter and sort tasks',
+  filterStatusLabel: 'Status',
+  filterPriorityLabel: 'Priority',
+  filterDueLabel: 'Due',
+  filterSortLabel: 'Sort',
+  filterAll: 'All',
+  statusOptionPending: 'Pending',
+  statusOptionCompleted: 'Completed',
+  dueAny: 'Any',
+  dueOptionOverdue: 'Overdue',
+  dueOptionToday: 'Today',
+  dueOptionWeek: 'This week',
+  dueOptionNone: 'No date',
+  sortNewest: 'Newest',
+  sortDue: 'Due date',
+  sortPriority: 'Priority',
+  clearFilters: 'Clear filters',
+  filtersNoMatch: 'No tasks match your filters.',
+  overdueSummary: (count: number | string) => `${count} overdue`,
 } as const;

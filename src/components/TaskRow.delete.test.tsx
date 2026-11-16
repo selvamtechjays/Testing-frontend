@@ -11,7 +11,15 @@ function setup(task: Task) {
   const noop = () => Promise.resolve(true);
   render(
     <ul>
-      <TaskRow task={task} onToggle={noop} onEditTitle={noop} onDelete={onDelete} />
+      <TaskRow
+        task={task}
+        today="2026-11-16"
+        onToggle={noop}
+        onEditTitle={noop}
+        onChangeDueDate={noop}
+        onChangePriority={noop}
+        onDelete={onDelete}
+      />
     </ul>,
   );
   return { onDelete };

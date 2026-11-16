@@ -10,17 +10,44 @@ const json = (status: number, body?: unknown) => ({
   body: body === undefined ? '' : JSON.stringify(body),
 });
 
+/** A status word shown on a row (the filter bar offers the same words as options). */
+const statusWord = (page: Page, word: 'Pending' | 'Completed') =>
+  page.getByRole('list', { name: 'Your tasks' }).getByText(word);
+
 interface StubTask {
   id: string;
   title: string;
   status: 'pending' | 'completed';
   createdAt: string;
+  dueDate: string | null;
+  priority: 'low' | 'medium' | 'high';
 }
 
 const seed = (): StubTask[] => [
-  { id: 'n', title: 'Plan launch', status: 'pending', createdAt: '2026-11-07T12:00:00.000Z' },
-  { id: 'm', title: 'Old idea', status: 'pending', createdAt: '2026-11-07T10:00:00.000Z' },
-  { id: 'o', title: 'Send logo', status: 'completed', createdAt: '2026-11-07T08:00:00.000Z' },
+  {
+    id: 'n',
+    title: 'Plan launch',
+    status: 'pending',
+    createdAt: '2026-11-07T12:00:00.000Z',
+    dueDate: null,
+    priority: 'medium',
+  },
+  {
+    id: 'm',
+    title: 'Old idea',
+    status: 'pending',
+    createdAt: '2026-11-07T10:00:00.000Z',
+    dueDate: null,
+    priority: 'medium',
+  },
+  {
+    id: 'o',
+    title: 'Send logo',
+    status: 'completed',
+    createdAt: '2026-11-07T08:00:00.000Z',
+    dueDate: null,
+    priority: 'medium',
+  },
 ];
 
 /** A stateful stand-in: DELETE removes the task, so a reload shows stored truth. */
@@ -28,7 +55,7 @@ async function stubTasksApi(page: Page, options: { failDelete?: boolean } = {}) 
   const tasks = seed();
   const deleted: string[] = [];
   await page.route('**/api/auth/me', (route) => route.fulfill(json(200, { user: USER })));
-  await page.route('**/api/tasks', (route) => route.fulfill(json(200, { tasks })));
+  await page.route(/\/api\/tasks(\?.*)?$/, (route) => route.fulfill(json(200, { tasks })));
   await page.route('**/api/tasks/*', (route) => {
     const id = route.request().url().split('/').pop() as string;
     deleted.push(id);
@@ -70,6 +97,9 @@ test.describe('delete task with Undo', () => {
     const { deleted } = await stubTasksApi(page);
     await page.clock.install();
     await page.goto('/');
+    // Stop the clock so only fastForward moves it: real time between the click and the jump must not eat the 100 ms margin.
+    await expect(titles(page)).toContainText(['Old idea']);
+    await page.clock.pauseAt(new Date(Date.now() + 1000));
     await page.getByRole('button', { name: 'Delete Old idea' }).click();
     await page.clock.fastForward(4900);
     await expect(page.getByRole('button', { name: 'Undo' })).toBeVisible();
@@ -77,6 +107,7 @@ test.describe('delete task with Undo', () => {
     await expect(page.getByRole('button', { name: 'Undo' })).toHaveCount(0);
     await expect.poll(() => deleted).toEqual(['m']);
 
+    await page.clock.resume();
     await page.reload();
     await expect(titles(page)).toContainText(['Plan launch', 'Send logo']);
   });
@@ -90,7 +121,7 @@ test.describe('delete task: other cases', () => {
     await expect(titles(page)).toContainText(['Plan launch', 'Old idea']);
     await page.getByRole('button', { name: 'Undo' }).click();
     await expect(titles(page)).toContainText(['Plan launch', 'Old idea', 'Send logo']);
-    await expect(page.getByText('Completed')).toBeVisible();
+    await expect(statusWord(page, 'Completed')).toBeVisible();
   });
 
   test('closing the page inside the window makes the delete final (AC-7 TS-10)', async ({

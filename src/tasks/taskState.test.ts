@@ -7,6 +7,7 @@ import {
   insertTemp,
   isTempId,
   nextTempId,
+  overdueDelta,
   patchField,
   reinsertAt,
   removeById,
@@ -159,5 +160,43 @@ describe('replaceId when the stored row is already in the list', () => {
     const temp = buildTask({ id: 'temp-9', title: 'new' });
     const stored = buildTask({ id: 'real-1', title: 'new' });
     expect(replaceId([temp, stored, a], 'temp-9', stored)).toEqual([stored, a]);
+  });
+});
+
+describe('overdueDelta (Task-23 AC-13 DEC-219)', () => {
+  const today = '2026-11-16';
+  const overdue = { status: 'pending', dueDate: '2026-11-10' } as const;
+  const fine = { status: 'pending', dueDate: '2026-11-30' } as const;
+
+  it('is +1 when a row becomes overdue and -1 when it stops being overdue', () => {
+    expect(overdueDelta(fine, overdue, today)).toBe(1);
+    expect(overdueDelta(overdue, fine, today)).toBe(-1);
+  });
+
+  it('is -1 when an overdue row is completed, and +1 when it is unticked', () => {
+    expect(overdueDelta(overdue, { ...overdue, status: 'completed' }, today)).toBe(-1);
+    expect(overdueDelta({ ...overdue, status: 'completed' }, overdue, today)).toBe(1);
+  });
+
+  it('is 0 when overdue-ness does not change', () => {
+    expect(overdueDelta(overdue, { ...overdue, dueDate: '2026-11-01' }, today)).toBe(0);
+    expect(overdueDelta(fine, { ...fine, dueDate: null }, today)).toBe(0);
+  });
+
+  it('counts an add as +1 and a delete as -1 only for an overdue row', () => {
+    expect(overdueDelta(null, overdue, today)).toBe(1);
+    expect(overdueDelta(null, fine, today)).toBe(0);
+    expect(overdueDelta(overdue, null, today)).toBe(-1);
+    expect(overdueDelta(fine, null, today)).toBe(0);
+  });
+});
+
+describe('mergeSearchResult keeps edits to date and priority (Task-23 AC-14)', () => {
+  it('keeps a due date edited while the response was in flight', () => {
+    const before = buildTask({ id: 'a', dueDate: null });
+    const edited = { ...before, dueDate: '2026-11-20', priority: 'high' as const };
+    const merged = mergeSearchResult([before], [before], [edited]);
+    expect(merged[0]).toMatchObject({ dueDate: '2026-11-20', priority: 'high' });
+    expect(editedSince([before], [edited], 'a')).toBe(true);
   });
 });

@@ -1,4 +1,5 @@
 import type { Task } from '../api/types';
+import { dueState } from '../lib/localDate';
 
 /** Pure list reducers for the three mutation shapes. Newest first; none mutates its input. */
 
@@ -33,7 +34,7 @@ export function removeById(list: Task[], id: string): Task[] {
 }
 
 /** Changes exactly one field of one row, leaving every other row and field as it is. */
-export function patchField<K extends 'title' | 'status'>(
+export function patchField<K extends 'title' | 'status' | 'dueDate' | 'priority'>(
   list: Task[],
   id: string,
   field: K,
@@ -59,9 +60,15 @@ export function indexByCreatedAt(list: Task[], task: Task): number {
   return index === -1 ? list.length : index;
 }
 
-/** True when a row's title or status differs from what it was when the request went out. */
+/** True when any editable field of a row differs from what it was when the request went out. */
 function changedSince(sent: Task | undefined, now: Task): boolean {
-  return sent !== undefined && (sent.title !== now.title || sent.status !== now.status);
+  return (
+    sent !== undefined &&
+    (sent.title !== now.title ||
+      sent.status !== now.status ||
+      sent.dueDate !== now.dueDate ||
+      sent.priority !== now.priority)
+  );
 }
 
 /**
@@ -80,7 +87,13 @@ export function mergeSearchResult(response: Task[], sent: Task[], now: Task[]): 
     .map((row) => {
       const current = nowById.get(row.id);
       if (!current || !changedSince(sentById.get(row.id), current)) return row;
-      return { ...row, title: current.title, status: current.status };
+      return {
+        ...row,
+        title: current.title,
+        status: current.status,
+        dueDate: current.dueDate,
+        priority: current.priority,
+      };
     });
   return [...added, ...rest];
 }
@@ -95,4 +108,18 @@ export function editedSince(sent: Task[], now: Task[], id: string): boolean {
       current,
     )
   );
+}
+
+/** What the overdue count needs to know about a row. */
+type Dated = Pick<Task, 'status' | 'dueDate'>;
+
+/**
+ * How the overdue count moves when a row goes from `before` to `after` (null means the row did not
+ * exist, or no longer does): +1 when it becomes overdue, -1 when it stops being overdue, else 0.
+ */
+export function overdueDelta(before: Dated | null, after: Dated | null, today: string): -1 | 0 | 1 {
+  const was = before !== null && dueState(before, today) === 'overdue';
+  const is = after !== null && dueState(after, today) === 'overdue';
+  if (was === is) return 0;
+  return is ? 1 : -1;
 }

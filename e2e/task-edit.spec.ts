@@ -10,25 +10,52 @@ const json = (status: number, body?: unknown) => ({
   body: body === undefined ? '' : JSON.stringify(body),
 });
 
+/** A status word shown on a row (the filter bar offers the same words as options). */
+const statusWord = (page: Page, word: 'Pending' | 'Completed') =>
+  page.getByRole('list', { name: 'Your tasks' }).getByText(word);
+
 interface StubTask {
   id: string;
   title: string;
   status: 'pending' | 'completed';
   createdAt: string;
+  dueDate: string | null;
+  priority: 'low' | 'medium' | 'high';
 }
 
 const at = '2026-11-07T09:00:00.000Z';
 const seed = (): StubTask[] => [
-  { id: 'n', title: 'Plan launch', status: 'pending', createdAt: at },
-  { id: 'm', title: 'Pay hosting invoice', status: 'pending', createdAt: at },
-  { id: 'o', title: 'Send logo', status: 'completed', createdAt: at },
+  {
+    id: 'n',
+    title: 'Plan launch',
+    status: 'pending',
+    createdAt: at,
+    dueDate: null,
+    priority: 'medium',
+  },
+  {
+    id: 'm',
+    title: 'Pay hosting invoice',
+    status: 'pending',
+    createdAt: at,
+    dueDate: null,
+    priority: 'medium',
+  },
+  {
+    id: 'o',
+    title: 'Send logo',
+    status: 'completed',
+    createdAt: at,
+    dueDate: null,
+    priority: 'medium',
+  },
 ];
 
 /** A stateful stand-in: PATCH changes what a later GET returns, so a reload shows stored truth. */
 async function stubTasksApi(page: Page, options: { failPatch?: boolean } = {}) {
   const tasks = seed();
   await page.route('**/api/auth/me', (route) => route.fulfill(json(200, { user: USER })));
-  await page.route('**/api/tasks', (route) => route.fulfill(json(200, { tasks })));
+  await page.route(/\/api\/tasks(\?.*)?$/, (route) => route.fulfill(json(200, { tasks })));
   await page.route('**/api/tasks/*', (route) => {
     if (options.failPatch) {
       return route.fulfill(json(503, { error: { code: 'SERVICE_UNAVAILABLE', message: 'Down.' } }));
@@ -52,17 +79,17 @@ test.describe('edit and complete task', () => {
     await expect(titles).toContainText(['Plan launch', 'Pay hosting invoice', 'Send logo']);
 
     await page.getByRole('checkbox', { name: 'Mark Pay hosting invoice as completed' }).check();
-    await expect(page.getByText('Completed')).toHaveCount(2);
+    await expect(statusWord(page, 'Completed')).toHaveCount(2);
     await expect(titles).toContainText(['Plan launch', 'Pay hosting invoice', 'Send logo']);
 
     await page.reload();
-    await expect(page.getByText('Completed')).toHaveCount(2);
+    await expect(statusWord(page, 'Completed')).toHaveCount(2);
     await expect(
       page.getByRole('checkbox', { name: 'Mark Pay hosting invoice as not completed' }),
     ).toBeChecked();
 
     await page.getByRole('checkbox', { name: 'Mark Send logo as not completed' }).uncheck();
-    await expect(page.getByText('Completed')).toHaveCount(1);
+    await expect(statusWord(page, 'Completed')).toHaveCount(1);
   });
 });
 

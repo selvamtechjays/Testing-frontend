@@ -64,3 +64,15 @@ export function TaskListSearchFailed({ onRetry }: { onRetry: () => void }) {
     </div>
   );
 }
+
+/** Filters match nothing: the list is fine, so offer the way back instead of a dead end. */
+export function TaskListFilterNoMatch({ onClear }: { onClear: () => void }) {
+  return (
+    <div className="card task-list-empty task-list-no-match">
+      <p className="task-list-empty-text">{copy.filtersNoMatch}</p>
+      <Button variant="secondary" onClick={onClear}>
+        {copy.clearFilters}
+      </Button>
+    </div>
+  );
+}

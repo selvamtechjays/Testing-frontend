@@ -1,4 +1,4 @@
-import type { ChangeEvent, Ref } from 'react';
+import type { ChangeEvent, KeyboardEvent, Ref } from 'react';
 
 interface TextFieldProps {
   id: string;
@@ -7,9 +7,36 @@ interface TextFieldProps {
   onChange: (value: string) => void;
   error?: string;
   hint?: string;
-  type?: 'text' | 'password';
+  type?: 'text' | 'password' | 'date';
   autoComplete?: string;
   inputRef?: Ref<HTMLInputElement>;
+  /** The latest value a date box accepts (type 'date'). */
+  max?: string;
+  /** Names the input for assistive tech without drawing the label (a row's own date box). */
+  labelHidden?: boolean;
+  disabled?: boolean;
+  /** Extra class for the field wrapper, so a screen can place it. */
+  className?: string;
+  onBlur?: () => void;
+  onKeyDown?: (event: KeyboardEvent<HTMLInputElement>) => void;
+}
+
+/** The hint and error lines under the input; the error is announced. */
+function FieldMessages({ id, hint, error }: { id: string; hint?: string; error?: string }) {
+  return (
+    <>
+      {hint ? (
+        <p id={`${id}-hint`} className="field-hint">
+          {hint}
+        </p>
+      ) : null}
+      {error ? (
+        <p id={`${id}-error`} role="alert" className="field-error">
+          {error}
+        </p>
+      ) : null}
+    </>
+  );
 }
 
 /** Labelled input; links its hint and error text via aria-describedby and sets aria-invalid. */
@@ -23,14 +50,20 @@ export function TextField({
   type = 'text',
   autoComplete,
   inputRef,
+  max,
+  labelHidden = false,
+  disabled,
+  className,
+  onBlur,
+  onKeyDown,
 }: TextFieldProps) {
-  const errorId = `${id}-error`;
-  const hintId = `${id}-hint`;
-  const describedBy = [hint ? hintId : null, error ? errorId : null].filter(Boolean).join(' ');
+  const describedBy = [hint ? `${id}-hint` : null, error ? `${id}-error` : null]
+    .filter(Boolean)
+    .join(' ');
   const handleChange = (event: ChangeEvent<HTMLInputElement>) => onChange(event.target.value);
   return (
-    <div className="field">
-      <label htmlFor={id}>{label}</label>
+    <div className={className ? `field ${className}` : 'field'}>
+      {labelHidden ? null : <label htmlFor={id}>{label}</label>}
       <input
         ref={inputRef}
         id={id}
@@ -38,19 +71,15 @@ export function TextField({
         value={value}
         onChange={handleChange}
         autoComplete={autoComplete}
+        max={max}
+        disabled={disabled}
+        aria-label={labelHidden ? label : undefined}
+        onBlur={onBlur}
+        onKeyDown={onKeyDown}
         aria-invalid={error ? true : undefined}
         aria-describedby={describedBy || undefined}
       />
-      {hint ? (
-        <p id={hintId} className="field-hint">
-          {hint}
-        </p>
-      ) : null}
-      {error ? (
-        <p id={errorId} role="alert" className="field-error">
-          {error}
-        </p>
-      ) : null}
+      <FieldMessages id={id} hint={hint} error={error} />
     </div>
   );
 }

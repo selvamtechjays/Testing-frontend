@@ -1,15 +1,22 @@
 import { useEffect, useRef, useState, type FormEvent, type KeyboardEvent, type Ref } from 'react';
-import type { Task } from '../api/types';
-import { copy } from '../copy';
+import type { Task, TaskPriority } from '../api/types';
+import { copy, PRIORITY_OPTIONS } from '../copy';
+import { dueState, formatDueDate, isBeyondMax, maxDueDate } from '../lib/localDate';
 import { isTempId } from '../tasks/taskState';
 import { clampTitle, validateTitle } from '../validation/title';
 import { Button } from './Button';
+import { SelectField } from './SelectField';
+import { TextField } from './TextField';
 import './TaskRow.css';
 
 interface TaskRowProps {
   task: Task;
+  /** The user's calendar date, which decides the Overdue and Due today words. */
+  today: string;
   onToggle: (id: string) => Promise<boolean>;
   onEditTitle: (id: string, title: string) => Promise<boolean>;
+  onChangeDueDate: (id: string, dueDate: string | null) => Promise<boolean>;
+  onChangePriority: (id: string, priority: TaskPriority) => Promise<boolean>;
   onDelete: (id: string) => Promise<boolean>;
   /** The row was removed and is animating out: hidden from assistive tech, every control off. */
   leaving?: boolean;
@@ -78,8 +85,17 @@ function EditTitleForm({ id, initial, onSave, onCancel }: EditTitleFormProps) {
   );
 }
 
+/** The words under the title: status, priority and, when there is a date, how it stands (never colour alone). */
+function dueText(task: Task, today: string): string | null {
+  const state = dueState(task, today);
+  if (state === 'overdue') return copy.dueOverdue;
+  if (state === 'today') return copy.dueToday;
+  return task.dueDate === null ? null : copy.dueOn(formatDueDate(task.dueDate));
+}
+
 interface TaskRowViewProps {
   task: Task;
+  today: string;
   completed: boolean;
   inactive: boolean;
   editRef: Ref<HTMLButtonElement>;
@@ -88,14 +104,36 @@ interface TaskRowViewProps {
 }
 
 /** The read-only row: title, status as a word (never colour alone), then Edit and Delete. */
-function TaskRowView({ task, completed, inactive, editRef, onEdit, onDelete }: TaskRowViewProps) {
+function TaskRowView({
+  task,
+  today,
+  completed,
+  inactive,
+  editRef,
+  onEdit,
+  onDelete,
+}: TaskRowViewProps) {
+  const due = dueText(task, today);
+  const state = dueState(task, today);
   return (
     <>
       <div className="task-row-body">
         <span className="task-row-title">{task.title}</span>
-        <span className="task-row-status">
-          {completed ? copy.statusCompleted : copy.statusPending}
-        </span>
+        <div className="task-row-meta">
+          <span className="task-row-status">
+            {completed ? copy.statusCompleted : copy.statusPending}
+          </span>
+          <span className="task-row-chip">{copy.priorityWord(task.priority)}</span>
+          {due ? (
+            <span
+              className={['task-row-chip', state === 'overdue' ? 'task-row-chip--overdue' : null]
+                .filter(Boolean)
+                .join(' ')}
+            >
+              {due}
+            </span>
+          ) : null}
+        </div>
       </div>
       <div className="task-row-actions">
         <Button variant="secondary" ref={editRef} disabled={inactive} onClick={onEdit}>
@@ -114,30 +152,142 @@ function TaskRowView({ task, completed, inactive, editRef, onEdit, onDelete }: T
   );
 }
 
+interface RowFieldsProps {
+  task: Task;
+  today: string;
+  disabled: boolean;
+  onChangeDueDate: (dueDate: string | null) => void;
+  onChangePriority: (priority: TaskPriority) => void;
+}
+
+const FULL_DATE = /^(\d{4})-\d{2}-\d{2}$/;
+/** A typed year below this is a half-typed one (0002-..), never a date the person meant. */
+const MIN_TYPED_YEAR = 1000;
+
+function isCompleteDate(value: string): boolean {
+  const match = FULL_DATE.exec(value);
+  return match !== null && Number(match[1]) >= MIN_TYPED_YEAR;
+}
+
 /**
- * One task: a tick control, the title as plain text (or an input while editing) and the status as
- * a word, never colour alone (AC-2, AC-9). A row whose add is still unsaved ignores both controls.
+ * The date box's text while it is being typed, kept apart from the saved date: it follows the
+ * task's date whenever that changes, and goes back to it when what was typed is not a full date.
  */
-export function TaskRow({ task, onToggle, onEditTitle, onDelete, leaving = false }: TaskRowProps) {
-  const [editing, setEditing] = useState(false);
+function useDateDraft(stored: string | null) {
+  const storedText = stored ?? '';
+  const [draft, setDraft] = useState(storedText);
+  const [seen, setSeen] = useState(storedText);
+  if (seen !== storedText) {
+    setSeen(storedText);
+    setDraft(storedText);
+  }
+  return { draft, setDraft, storedText };
+}
+
+/**
+ * Date and priority edits; the date saves when the box is left or Enter is pressed, never
+ * mid-typing, and a date past the five-year limit is refused with a message instead.
+ */
+function RowFields({ task, today, disabled, onChangeDueDate, onChangePriority }: RowFieldsProps) {
+  const { draft, setDraft, storedText } = useDateDraft(task.dueDate);
+  // The text that was refused; the message shows only while the box still holds exactly that text,
+  // so typing, Clear date, a rollback or a reload (all of which change the box) drop it.
+  const [refused, setRefused] = useState<string | null>(null);
+  const tooFar = refused !== null && refused === draft;
+  const max = maxDueDate(today);
+
+  const settle = () => {
+    if (isCompleteDate(draft) && isBeyondMax(draft, max)) {
+      setRefused(draft);
+    } else if (isCompleteDate(draft) && draft !== storedText) {
+      onChangeDueDate(draft);
+    } else {
+      setDraft(storedText);
+    }
+  };
+
+  const onDateKeyDown = (event: KeyboardEvent<HTMLInputElement>) => {
+    if (event.key === 'Enter') settle();
+  };
+
+  return (
+    <div className="task-row-fields">
+      <TextField
+        id={`task-${task.id}-due`}
+        label={copy.rowDueDateLabel(task.title)}
+        labelHidden
+        type="date"
+        className="task-row-date"
+        value={draft}
+        max={max}
+        disabled={disabled}
+        error={tooFar ? copy.dueDateTooFar : undefined}
+        onChange={setDraft}
+        onBlur={settle}
+        onKeyDown={onDateKeyDown}
+      />
+      <Button
+        variant="secondary"
+        disabled={disabled || task.dueDate === null}
+        aria-label={copy.rowClearDateLabel(task.title)}
+        onClick={() => onChangeDueDate(null)}
+      >
+        {copy.clearDate}
+      </Button>
+      <SelectField
+        id={`task-${task.id}-priority`}
+        label={copy.rowPriorityLabel(task.title)}
+        labelHidden
+        value={task.priority}
+        options={PRIORITY_OPTIONS}
+        disabled={disabled}
+        onChange={onChangePriority}
+      />
+    </div>
+  );
+}
+
+/** Leaving edit mode hands focus back to the Edit button; returns the ref that button takes. */
+function useReturnFocus(editing: boolean) {
   const editRef = useRef<HTMLButtonElement>(null);
   const wasEditing = useRef(false);
-  const completed = task.status === 'completed';
-  const unsaved = isTempId(task.id);
-  const inactive = unsaved || leaving;
-  const classes = [
+  useEffect(() => {
+    if (!editing && wasEditing.current) editRef.current?.focus();
+    wasEditing.current = editing;
+  }, [editing]);
+  return editRef;
+}
+
+function rowClasses(completed: boolean, leaving: boolean): string {
+  return [
     'task-row',
     completed ? 'task-row--completed' : null,
     leaving ? 'task-row--leaving' : null,
   ]
     .filter(Boolean)
     .join(' ');
+}
 
-  // Leaving edit mode hands focus back to the Edit button.
-  useEffect(() => {
-    if (!editing && wasEditing.current) editRef.current?.focus();
-    wasEditing.current = editing;
-  }, [editing]);
+/**
+ * One task: a tick control, the title as plain text (or an input while editing) and the status as
+ * a word, never colour alone (AC-2, AC-9). A row whose add is still unsaved ignores both controls.
+ */
+export function TaskRow({
+  task,
+  today,
+  onToggle,
+  onEditTitle,
+  onChangeDueDate,
+  onChangePriority,
+  onDelete,
+  leaving = false,
+}: TaskRowProps) {
+  const [editing, setEditing] = useState(false);
+  const editRef = useReturnFocus(editing);
+  const completed = task.status === 'completed';
+  const unsaved = isTempId(task.id);
+  const inactive = unsaved || leaving;
+  const classes = rowClasses(completed, leaving);
 
   const finish = (title?: string) => {
     setEditing(false);
@@ -164,6 +314,7 @@ export function TaskRow({ task, onToggle, onEditTitle, onDelete, leaving = false
       ) : (
         <TaskRowView
           task={task}
+          today={today}
           completed={completed}
           inactive={inactive}
           editRef={editRef}
@@ -171,6 +322,13 @@ export function TaskRow({ task, onToggle, onEditTitle, onDelete, leaving = false
           onDelete={() => void onDelete(task.id)}
         />
       )}
+      <RowFields
+        task={task}
+        today={today}
+        disabled={inactive}
+        onChangeDueDate={(dueDate) => void onChangeDueDate(task.id, dueDate)}
+        onChangePriority={(priority) => void onChangePriority(task.id, priority)}
+      />
     </li>
   );
 }

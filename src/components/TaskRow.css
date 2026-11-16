@@ -87,6 +87,33 @@
   font-weight: var(--font-weight-semibold);
 }
 
+/* Status, priority and due words sit together under the title and wrap on narrow screens. */
+.task-row-meta {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-1) var(--space-2);
+}
+
+.task-row-chip {
+  flex-shrink: 0;
+  padding: 0 var(--space-2);
+  border: 1px solid var(--color-divider);
+  border-radius: var(--radius-full);
+  background: var(--color-subtle);
+  color: var(--color-muted);
+  font-size: var(--font-size-sm);
+  line-height: var(--line-height-sm);
+  font-weight: var(--font-weight-medium);
+}
+
+/* Overdue is the word first; the tint only backs it up. */
+.task-row-chip--overdue {
+  border-color: var(--color-danger);
+  background: var(--color-danger-subtle);
+  color: var(--color-danger);
+  font-weight: var(--font-weight-semibold);
+}
+
 .task-row--completed .task-row-title {
   color: var(--color-muted);
   text-decoration-color: var(--color-muted);
@@ -173,6 +200,24 @@
 .task-row-toggle:disabled::before {
   border-color: var(--color-disabled-bg);
   background: var(--color-disabled-bg);
+}
+
+/* Date and priority controls: their own line, under the title */
+.task-row-fields {
+  display: flex;
+  flex: 1 1 100%;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--space-2);
+  padding-left: calc(var(--control-height) + var(--space-3));
+}
+
+.task-row-fields .field {
+  margin-bottom: 0;
+}
+
+.task-row-date {
+  min-width: 0;
 }
 
 /* Inline title edit */

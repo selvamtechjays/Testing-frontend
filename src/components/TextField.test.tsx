@@ -80,3 +80,33 @@ describe('TextField hint and autocomplete', () => {
     expect(screen.getByLabelText('U')).toHaveAttribute('aria-describedby', 'u-hint u-error');
   });
 });
+
+describe('TextField as a date box', () => {
+  it('passes type, max and disabled to the input and keeps its error wiring', () => {
+    render(
+      <TextField
+        id="due"
+        label="Due date"
+        type="date"
+        max="2031-11-16"
+        value="2026-11-16"
+        onChange={() => {}}
+        disabled
+        error="Too far"
+      />,
+    );
+    const input = screen.getByLabelText('Due date');
+    expect(input).toHaveAttribute('type', 'date');
+    expect(input).toHaveAttribute('max', '2031-11-16');
+    expect(input).toBeDisabled();
+    expect(input).toHaveAttribute('aria-describedby', screen.getByRole('alert').id);
+  });
+
+  it('names the input without drawing a label when labelHidden', () => {
+    const { container } = render(
+      <TextField id="due" label="Due date for Pay rent" labelHidden value="" onChange={() => {}} />,
+    );
+    expect(container.querySelector('label')).toBeNull();
+    expect(screen.getByLabelText('Due date for Pay rent')).toHaveAttribute('id', 'due');
+  });
+});

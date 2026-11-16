@@ -22,7 +22,7 @@ describe('App', () => {
 
   it('offers no language control, logo or cookie prompt, and only the theme toggle, Log out and Add as buttons (AC-8 AC-10 TS-9 TS-11, Task-21 AC-2)', async () => {
     await renderHome();
-    expect(screen.queryByRole('combobox')).not.toBeInTheDocument();
+    expect(screen.queryByRole('combobox', { name: /language|locale/i })).not.toBeInTheDocument();
     expect(screen.queryByRole('img')).not.toBeInTheDocument();
     expect(screen.queryByRole('switch')).not.toBeInTheDocument();
     expect(screen.queryByRole('checkbox')).not.toBeInTheDocument();

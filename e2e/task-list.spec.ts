@@ -10,11 +10,17 @@ const json = (status: number, body?: unknown) => ({
   body: body === undefined ? '' : JSON.stringify(body),
 });
 
+/** A status word shown on a row (the filter bar offers the same words as options). */
+const statusWord = (page: Page, word: 'Pending' | 'Completed') =>
+  page.getByRole('list', { name: 'Your tasks' }).getByText(word);
+
 interface StubTask {
   id: string;
   title: string;
   status: 'pending' | 'completed';
   createdAt: string;
+  dueDate: string | null;
+  priority: 'low' | 'medium' | 'high';
 }
 
 /** A tiny stateful stand-in for the session and task endpoints (newest first, like the server). */
@@ -22,7 +28,7 @@ async function stubTasksApi(page: Page, options: { failAdds?: boolean; tasks?: S
   const tasks: StubTask[] = [...(options.tasks ?? [])];
   let counter = 0;
   await page.route('**/api/auth/me', (route) => route.fulfill(json(200, { user: USER })));
-  await page.route('**/api/tasks', async (route) => {
+  await page.route(/\/api\/tasks(\?.*)?$/, async (route) => {
     const request = route.request();
     if (request.method() === 'GET') return route.fulfill(json(200, { tasks }));
     if (options.failAdds) {
@@ -35,6 +41,8 @@ async function stubTasksApi(page: Page, options: { failAdds?: boolean; tasks?: S
       title,
       status: 'pending',
       createdAt: new Date().toISOString(),
+      dueDate: null,
+      priority: 'medium',
     };
     tasks.unshift(task);
     return route.fulfill(json(201, { task }));
@@ -59,7 +67,7 @@ test.describe('task list and add task', () => {
     await page.getByRole('button', { name: 'Add' }).click();
     const titles = page.getByRole('listitem');
     await expect(titles).toContainText(['Plan launch', 'Send brand colours to Techjays']);
-    await expect(page.getByText('Pending')).toHaveCount(2);
+    await expect(statusWord(page, 'Pending')).toHaveCount(2);
   });
 
   test('shows existing tasks marked Pending or Completed (AC-1 AC-2 AC-9 TS-1 TS-14)', async ({
@@ -68,14 +76,29 @@ test.describe('task list and add task', () => {
     const at = '2026-11-07T09:00:00.000Z';
     await stubTasksApi(page, {
       tasks: [
-        { id: 'a', title: 'Plan launch', status: 'pending', createdAt: at },
-        { id: 'b', title: 'Send logo', status: 'completed', createdAt: at },
+        {
+          id: 'a',
+          title: 'Plan launch',
+          status: 'pending',
+          createdAt: at,
+          dueDate: null,
+          priority: 'medium',
+        },
+        {
+          id: 'b',
+          title: 'Send logo',
+          status: 'completed',
+          createdAt: at,
+          dueDate: null,
+          priority: 'medium',
+        },
       ],
     });
     await page.goto('/');
     await expect(page.getByRole('listitem')).toContainText(['Plan launch', 'Send logo']);
-    await expect(page.getByText('Completed')).toBeVisible();
-    await expect(page.getByRole('textbox')).toHaveCount(1);
+    await expect(statusWord(page, 'Completed')).toBeVisible();
+    // Only the add form has a task-title box; rows are not in edit mode (date and search boxes are separate fields).
+    await expect(page.getByRole('textbox', { name: 'New task' })).toHaveCount(1);
   });
 
   test('a failed save removes the new task and shows the message (AC-12 TS-13)', async ({
