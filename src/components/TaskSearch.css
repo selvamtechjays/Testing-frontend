@@ -1,0 +1,30 @@
+/* Search box: a calm card that glows while the field inside has focus, like the add form. */
+.task-search {
+  margin-bottom: var(--space-4);
+}
+
+.task-search:focus-within {
+  border-color: var(--color-primary);
+  box-shadow: var(--shadow-hover);
+}
+
+.task-search-field {
+  width: 100%;
+  margin-bottom: 0;
+}
+
+.task-search-input {
+  width: 100%;
+  box-sizing: border-box;
+}
+
+/* Read by assistive tech, never drawn. */
+.task-search-live {
+  position: absolute;
+  width: 0.0625rem;
+  height: 0.0625rem;
+  margin: -0.0625rem;
+  padding: 0;
+  overflow: hidden;
+  clip-path: inset(50%);
+}

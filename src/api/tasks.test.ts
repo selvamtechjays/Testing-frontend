@@ -4,7 +4,7 @@ import { describe, expect, it, vi } from 'vitest';
 import { server } from '../test/mocks/server';
 import { buildTask } from '../test/builders/task';
 import { ApiError, setUnauthorizedHandler } from './client';
-import { createTask, deleteTask, updateTask } from './tasks';
+import { createTask, deleteTask, listTasks, updateTask } from './tasks';
 
 describe('task API calls', () => {
   it('createTask posts the title and returns the stored task (AC-2)', async () => {
@@ -106,5 +106,48 @@ describe('task API calls', () => {
     await expect(deleteTask('t')).rejects.toMatchObject({ status: 401 });
     setUnauthorizedHandler(null);
     expect(handler).toHaveBeenCalledTimes(1);
+  });
+
+  describe('listTasks search (Task-22 AC-1 AC-3)', () => {
+    const seen = (): { urls: string[] } => {
+      const record = { urls: [] as string[] };
+      server.use(
+        http.get('/api/tasks', ({ request }) => {
+          record.urls.push(request.url);
+          return HttpResponse.json({ tasks: [] });
+        }),
+      );
+      return record;
+    };
+
+    it('sends no query string without search text (AC-3)', async () => {
+      const record = seen();
+      await listTasks();
+      await listTasks({ search: '' });
+      await listTasks({ search: '   ' });
+      expect(record.urls.map((u) => new URL(u).search)).toEqual(['', '', '']);
+    });
+
+    it('sends the trimmed text, encoded, as search (AC-1)', async () => {
+      const record = seen();
+      await listTasks({ search: '  milk & eggs?  ' });
+      const url = new URL(record.urls[0]);
+      expect(url.search).toBe('?search=milk%20%26%20eggs%3F');
+      expect(url.searchParams.get('search')).toBe('milk & eggs?');
+    });
+
+    it('returns the filtered list the server sends (AC-1)', async () => {
+      const milk = buildTask({ title: 'Buy milk' });
+      server.use(http.get('/api/tasks', () => HttpResponse.json({ tasks: [milk] })));
+      await expect(listTasks({ search: 'milk' })).resolves.toEqual({ tasks: [milk] });
+    });
+
+    it('rejects when the signal is aborted, so the caller can drop it (AC-6)', async () => {
+      server.use(http.get('/api/tasks', () => new Promise(() => {})));
+      const controller = new AbortController();
+      const pending = listTasks({ search: 'milk', signal: controller.signal });
+      controller.abort();
+      await expect(pending).rejects.toMatchObject({ status: 0 });
+    });
   });
 });

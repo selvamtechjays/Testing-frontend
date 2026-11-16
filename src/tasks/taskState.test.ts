@@ -11,6 +11,8 @@ import {
   reinsertAt,
   removeById,
   replaceId,
+  mergeSearchResult,
+  editedSince,
 } from './taskState';
 
 const a = buildTask({ id: 'a', title: 'A' });
@@ -106,5 +108,56 @@ describe('indexByCreatedAt', () => {
 
   it('places a task with the same time after the rows that share it (AC-2)', () => {
     expect(indexByCreatedAt([newer, older], buildTask({ createdAt: at(12) }))).toBe(1);
+  });
+});
+
+describe('mergeSearchResult (a response that lands after the user kept working)', () => {
+  const edited = (task: Task, change: Partial<Task>) => ({ ...task, ...change });
+
+  it('is the response itself when nothing changed meanwhile', () => {
+    expect(mergeSearchResult([b], [a, b], [a, b])).toEqual([b]);
+  });
+
+  it('keeps rows added since the request went out on top, in their current order', () => {
+    const temp = buildTask({ id: 'temp-1', title: 'T' });
+    const stored = buildTask({ id: 'real-2', title: 'S' });
+    expect(mergeSearchResult([b], [a, b], [temp, stored, a, b]).map((t) => t.id)).toEqual([
+      'temp-1',
+      'real-2',
+      'b',
+    ]);
+  });
+
+  it('does not duplicate an added row the response already carries', () => {
+    const stored = buildTask({ id: 'real-2', title: 'S' });
+    expect(mergeSearchResult([stored, b], [a, b], [stored, a, b])).toEqual([stored, b]);
+  });
+
+  it('lets edits made since the request went out win over the response', () => {
+    const renamed = edited(b, { title: 'B2', status: 'completed' });
+    expect(mergeSearchResult([b, c], [a, b, c], [a, renamed, c])).toEqual([renamed, c]);
+  });
+
+  it('keeps a row deleted since the request went out gone', () => {
+    expect(mergeSearchResult([b, c], [a, b, c], [a, c])).toEqual([c]);
+  });
+
+  it('keeps rows only the server knows about', () => {
+    expect(mergeSearchResult([c], [a, b], [a, b])).toEqual([c]);
+  });
+
+  it('reports which rows were edited since the request went out', () => {
+    const renamed = edited(b, { title: 'B2' });
+    expect(editedSince([a, b], [a, renamed], 'b')).toBe(true);
+    expect(editedSince([a, b], [a, renamed], 'a')).toBe(false);
+    expect(editedSince([a], [a, renamed], 'b')).toBe(false);
+  });
+});
+
+describe('replaceId when the stored row is already in the list', () => {
+  it('drops the temporary row instead of showing the stored one twice', () => {
+    const temp = buildTask({ id: 'temp-9', title: 'new' });
+    const stored = buildTask({ id: 'real-1', title: 'new' });
+    expect(replaceId([temp, stored, a], 'temp-9', stored)).toEqual([stored, a]);
   });
 });

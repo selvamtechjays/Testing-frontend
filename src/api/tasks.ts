@@ -7,9 +7,20 @@ export interface TaskPatch {
   status?: TaskStatus;
 }
 
-/** GET /api/tasks (EP-TASK-01). The server returns the signed-in user's tasks, newest first. */
-export function listTasks(signal?: AbortSignal): Promise<{ tasks: Task[] }> {
-  return apiFetch<{ tasks: Task[] }>('/tasks', { signal });
+export interface ListTasksOptions {
+  /** Title text to search for; empty or spaces only means the full list. */
+  search?: string;
+  signal?: AbortSignal;
+}
+
+/**
+ * GET /api/tasks (EP-TASK-01). The server returns the signed-in user's tasks, newest first;
+ * with search text, only those whose title contains it.
+ */
+export function listTasks(options: ListTasksOptions = {}): Promise<{ tasks: Task[] }> {
+  const text = options.search?.trim() ?? '';
+  const query = text === '' ? '' : `?search=${encodeURIComponent(text)}`;
+  return apiFetch<{ tasks: Task[] }>(`/tasks${query}`, { signal: options.signal });
 }
 
 /** POST /api/tasks (EP-TASK-02). Resolves with the stored task; rejects with ApiError otherwise. */

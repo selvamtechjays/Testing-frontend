@@ -26,3 +26,11 @@ export const deleteTaskNoContent = http.delete(
 
 export const deleteTaskFails = (status = 500) =>
   http.delete('/api/tasks/:id', () => HttpResponse.json(serverErrorBody, { status }));
+
+/** The list filtered the way the server does: trimmed, case-insensitive literal title substring. */
+export const listTasksMatching = (tasks: Task[]) =>
+  http.get('/api/tasks', ({ request }) => {
+    const text = (new URL(request.url).searchParams.get('search') ?? '').trim().toLowerCase();
+    const matches = text === '' ? tasks : tasks.filter((t) => t.title.toLowerCase().includes(text));
+    return HttpResponse.json({ tasks: matches });
+  });

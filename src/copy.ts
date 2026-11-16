@@ -51,4 +51,10 @@ export const copy = {
   themeToggle: 'Dark mode',
   loadFailed: 'This page could not be loaded. Check your connection and try again.',
   reload: 'Reload',
+  searchLabel: 'Search tasks',
+  searchNoMatch: 'No tasks match your search.',
+  searchFailed: 'Could not search your tasks.',
+  retry: 'Retry',
+  searchResultCount: (count: number | string) =>
+    Number(count) === 1 ? '1 task found.' : `${count} tasks found.`,
 } as const;
