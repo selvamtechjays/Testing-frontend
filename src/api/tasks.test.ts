@@ -6,6 +6,32 @@ import { buildTask } from '../test/builders/task';
 import { ApiError, setUnauthorizedHandler } from './client';
 import { createTask, deleteTask, listTasks, updateTask } from './tasks';
 
+describe('tasks from a server that leaves out the due date and priority', () => {
+  // An API older than Task-23 (or a row written before it) sends neither field. Unnormalised,
+  // `dueDate` arrives as undefined and the row crashed formatting it (fix-review round 1).
+  const bare = {
+    id: 'old-1',
+    title: 'Pay rent',
+    status: 'pending',
+    createdAt: '2026-11-07T12:00:00.000Z',
+  };
+  const normalised = { ...bare, dueDate: null, priority: 'medium' };
+
+  it('reads them as no due date and Medium from the list (DEC-210)', async () => {
+    server.use(http.get('/api/tasks', () => HttpResponse.json({ tasks: [bare] })));
+    await expect(listTasks()).resolves.toEqual({ tasks: [normalised] });
+  });
+
+  it('reads them as no due date and Medium from create and update (DEC-210)', async () => {
+    server.use(
+      http.post('/api/tasks', () => HttpResponse.json({ task: bare }, { status: 201 })),
+      http.patch('/api/tasks/:id', () => HttpResponse.json({ task: bare })),
+    );
+    await expect(createTask({ title: 'Pay rent' })).resolves.toEqual({ task: normalised });
+    await expect(updateTask('old-1', { status: 'pending' })).resolves.toEqual({ task: normalised });
+  });
+});
+
 describe('task API calls', () => {
   it('createTask posts the title and returns the stored task (AC-2)', async () => {
     const stored = buildTask({ id: 'real-1', title: 'Buy milk' });

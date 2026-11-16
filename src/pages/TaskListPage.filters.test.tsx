@@ -91,6 +91,22 @@ beforeEach(() => window.localStorage.clear());
 afterEach(() => window.localStorage.clear());
 
 describe('task list: filters, sort and overdue summary (Task-23)', { timeout: 15000 }, () => {
+  it('shows tasks from a server that sends no due date or priority, instead of crashing (DEC-210)', async () => {
+    // The exact shape an API older than Task-23 returns: neither field, and no overdueCount.
+    const bare = {
+      id: 'old-1',
+      title: 'Pay rent',
+      status: 'pending',
+      createdAt: '2026-11-07T12:00:00.000Z',
+    };
+    renderList(http.get('/api/tasks', () => HttpResponse.json({ tasks: [bare] })));
+    await waitFor(() => expect(listedTitles()).toEqual(['Pay rent']));
+    const list = screen.getByRole('list', { name: 'Your tasks' });
+    expect(within(list).getByText(/Medium priority/)).toBeInTheDocument();
+    expect(within(list).queryByText(/^Due |Overdue|Due today/)).not.toBeInTheDocument();
+    expect(screen.queryByRole('button', { name: /overdue/ })).not.toBeInTheDocument();
+  });
+
   it('sends today on the very first list call, with no filter keys (AC-9 AC-5 DEC-218)', async () => {
     const { urls, handler } = recordingList(all);
     renderList(handler);

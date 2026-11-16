@@ -40,11 +40,23 @@ export interface TaskListResult {
   overdueCount?: number;
 }
 
+/** A task as the server sent it: an older API, or a row written before Task-23, may lack the two fields. */
+type WireTask = Omit<Task, 'dueDate' | 'priority'> & Partial<Pick<Task, 'dueDate' | 'priority'>>;
+
+/**
+ * Every task enters the app through here, so a missing due date reads as none and a missing
+ * priority as Medium (the same rule the server applies to older rows, DEC-210). A field the
+ * server left out must never crash the list.
+ */
+export function toTask(wire: WireTask): Task {
+  return { ...wire, dueDate: wire.dueDate ?? null, priority: wire.priority ?? 'medium' };
+}
+
 /**
  * GET /api/tasks (EP-TASK-01). The server returns the signed-in user's tasks, narrowed and ordered
  * by the filters, and the title search when there is text. `today` goes on every call.
  */
-export function listTasks(options: ListTasksOptions = {}): Promise<TaskListResult> {
+export async function listTasks(options: ListTasksOptions = {}): Promise<TaskListResult> {
   const params = new URLSearchParams();
   const text = options.search?.trim() ?? '';
   if (text !== '') params.set('search', text);
@@ -53,25 +65,35 @@ export function listTasks(options: ListTasksOptions = {}): Promise<TaskListResul
     if (filters[key] !== DEFAULT_FILTERS[key]) params.set(key, filters[key]);
   }
   params.set('today', options.today ?? localToday());
-  return apiFetch<TaskListResult>(`/tasks?${params.toString()}`, { signal: options.signal });
+  const result = await apiFetch<{ tasks: WireTask[]; overdueCount?: number }>(
+    `/tasks?${params.toString()}`,
+    { signal: options.signal },
+  );
+  return { ...result, tasks: result.tasks.map(toTask) };
 }
 
 /** POST /api/tasks (EP-TASK-02). Resolves with the stored task; rejects with ApiError otherwise. */
-export function createTask(input: NewTask, signal?: AbortSignal): Promise<{ task: Task }> {
-  return apiFetch<{ task: Task }>('/tasks', { method: 'POST', body: input, signal });
+export async function createTask(input: NewTask, signal?: AbortSignal): Promise<{ task: Task }> {
+  const { task } = await apiFetch<{ task: WireTask }>('/tasks', {
+    method: 'POST',
+    body: input,
+    signal,
+  });
+  return { task: toTask(task) };
 }
 
 /** PATCH /api/tasks/:id (EP-TASK-03). Used for tick, untick and edits of the title, due date and priority. */
-export function updateTask(
+export async function updateTask(
   id: string,
   patch: TaskPatch,
   signal?: AbortSignal,
 ): Promise<{ task: Task }> {
-  return apiFetch<{ task: Task }>(`/tasks/${encodeURIComponent(id)}`, {
+  const { task } = await apiFetch<{ task: WireTask }>(`/tasks/${encodeURIComponent(id)}`, {
     method: 'PATCH',
     body: patch,
     signal,
   });
+  return { task: toTask(task) };
 }
 
 export interface DeleteOptions {
