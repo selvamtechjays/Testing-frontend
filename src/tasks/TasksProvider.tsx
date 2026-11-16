@@ -2,24 +2,60 @@ import { useCallback, useEffect, useMemo, useRef, useState, type ReactNode } fro
 import { createTask, listTasks, updateTask, type TaskPatch } from '../api/tasks';
 import type { Task } from '../api/types';
 import { useInstantUpdate } from '../lib/useInstantUpdate';
-import { insertTemp, isTempId, nextTempId, patchField, removeById, replaceId } from './taskState';
+import {
+  editedSince,
+  insertTemp,
+  isTempId,
+  mergeSearchResult,
+  nextTempId,
+  patchField,
+  removeById,
+  replaceId,
+} from './taskState';
 import { usePendingDelete } from './usePendingDelete';
 import { TasksContext, type ListStatus, type TasksValue } from './tasksContext';
 
-type LoadState = 'loading' | 'ready' | 'failed';
+type LoadState = 'loading' | 'ready' | 'failed' | 'searchFailed';
 type EditableField = 'title' | 'status';
 type Stored = Pick<Task, EditableField>;
 
-function toStatus(load: LoadState, count: number): ListStatus {
+/** How long the box must sit still before its text becomes the query that is sent. */
+const SEARCH_DEBOUNCE_MS = 300;
+
+function toStatus(load: LoadState, count: number, appliedQuery: string): ListStatus {
   if (load === 'loading') return 'loading';
   if (load === 'failed') return 'loadFailed';
-  return count === 0 ? 'empty' : 'populated';
+  if (load === 'searchFailed') return 'searchFailed';
+  if (count > 0) return 'populated';
+  return appliedQuery === '' ? 'empty' : 'noMatch';
+}
+
+/** The box's text, and the trimmed text 300 ms after the last keystroke, which is what is sent. */
+function useSearchQuery() {
+  const [search, setSearch] = useState('');
+  const [query, setQuery] = useState('');
+  useEffect(() => {
+    const timer = setTimeout(() => setQuery(search.trim()), SEARCH_DEBOUNCE_MS);
+    return () => clearTimeout(timer);
+  }, [search]);
+  return { search, setSearch, query };
+}
+
+/** What the last finished request was for, so a request still in flight can be told apart. */
+interface Settled {
+  query: string;
+  attempt: number;
 }
 
 /** The in-memory list, its load state, and what the server last confirmed per task. */
 function useTaskStore() {
   const [tasks, setTasks] = useState<Task[]>([]);
   const [load, setLoad] = useState<LoadState>('loading');
+  const { search, setSearch, query } = useSearchQuery();
+  const [attempt, setAttempt] = useState(0);
+  const [appliedQuery, setAppliedQuery] = useState('');
+  const [settled, setSettled] = useState<Settled | null>(null);
+  const hasLoaded = useRef(false);
   // The list as of the latest change, readable synchronously (state is not, between renders).
   const listRef = useRef<Task[]>([]);
   // What the server last confirmed per task, so a failed change restores stored truth.
@@ -34,24 +70,52 @@ function useTaskStore() {
     confirmed.current.set(task.id, { title: task.title, status: task.status });
   }, []);
 
+  // Runs on mount and whenever the query changes (or Retry is pressed). Each run aborts the one
+  // before it, and a response from an aborted run is dropped; an abort is not a failure.
   useEffect(() => {
-    let cancelled = false;
-    listTasks()
+    const controller = new AbortController();
+    const sent = listRef.current;
+    listTasks({ search: query, signal: controller.signal })
       .then((result) => {
-        if (cancelled) return;
-        result.tasks.forEach(remember);
-        commit(() => result.tasks);
+        if (controller.signal.aborted) return;
+        // What the user changed while this was in flight wins; the response's copy of it is stale.
+        const now = listRef.current;
+        result.tasks.filter((task) => !editedSince(sent, now, task.id)).forEach(remember);
+        commit((list) => mergeSearchResult(result.tasks, sent, list));
+        hasLoaded.current = true;
+        setAppliedQuery(query);
         setLoad('ready');
+        setSettled({ query, attempt });
       })
       .catch(() => {
-        if (!cancelled) setLoad('failed');
+        if (controller.signal.aborted) return;
+        // The first load keeps its own message; any later request failing is a failed search.
+        setLoad(hasLoaded.current ? 'searchFailed' : 'failed');
+        setSettled({ query, attempt });
       });
-    return () => {
-      cancelled = true;
-    };
-  }, [commit, remember]);
+    return () => controller.abort();
+  }, [query, attempt, commit, remember, listRef]);
 
-  return { tasks, load, listRef, confirmed, commit, remember };
+  const retrySearch = useCallback(() => setAttempt((count) => count + 1), []);
+  // Not busy before the first answer (that is the skeleton's job) or after a failed first load.
+  const searching =
+    settled !== null &&
+    load !== 'failed' &&
+    (settled.query !== query || settled.attempt !== attempt);
+
+  return {
+    tasks,
+    load,
+    search,
+    setSearch,
+    retrySearch,
+    searching,
+    appliedQuery,
+    listRef,
+    confirmed,
+    commit,
+    remember,
+  };
 }
 
 type TaskStore = ReturnType<typeof useTaskStore>;
@@ -137,12 +201,17 @@ export function TasksProvider({ children }: { children: ReactNode }) {
   const store = useTaskStore();
   const { addTask, toggleStatus, editTitle } = useTaskActions(store);
   const { startDelete, undo: undoDelete, deletePending } = usePendingDelete(store);
-  const { tasks, load } = store;
+  const { tasks, load, search, setSearch, retrySearch, searching, appliedQuery } = store;
 
   const value = useMemo<TasksValue>(
     () => ({
       tasks,
-      status: toStatus(load, tasks.length),
+      status: toStatus(load, tasks.length, appliedQuery),
+      search,
+      setSearch,
+      retrySearch,
+      searching,
+      searchApplied: appliedQuery !== '',
       addTask,
       toggleStatus,
       editTitle,
@@ -150,7 +219,21 @@ export function TasksProvider({ children }: { children: ReactNode }) {
       undoDelete,
       deletePending,
     }),
-    [tasks, load, addTask, toggleStatus, editTitle, startDelete, undoDelete, deletePending],
+    [
+      tasks,
+      load,
+      appliedQuery,
+      search,
+      setSearch,
+      retrySearch,
+      searching,
+      addTask,
+      toggleStatus,
+      editTitle,
+      startDelete,
+      undoDelete,
+      deletePending,
+    ],
   );
   return <TasksContext.Provider value={value}>{children}</TasksContext.Provider>;
 }

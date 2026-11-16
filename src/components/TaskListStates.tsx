@@ -1,4 +1,6 @@
 import { copy } from '../copy';
+import { Button } from './Button';
+import { StatusMessage } from './StatusMessage';
 import './TaskListStates.css';
 
 const SKELETON_ROWS = 3;
@@ -38,6 +40,27 @@ export function TaskListEmpty() {
         <path d="M17 30h14" />
       </svg>
       <p className="task-list-empty-text">{copy.tasksEmpty}</p>
+    </div>
+  );
+}
+
+/** No match: the list is fine, nothing in it contains the search text. The live region reads it aloud. */
+export function TaskListNoMatch() {
+  return (
+    <div className="card task-list-empty task-list-no-match">
+      <p className="task-list-empty-text">{copy.searchNoMatch}</p>
+    </div>
+  );
+}
+
+/** Search failed: the usual alert plus Retry, which runs the same query again. */
+export function TaskListSearchFailed({ onRetry }: { onRetry: () => void }) {
+  return (
+    <div className="task-list-search-failed">
+      <StatusMessage kind="alert">{copy.searchFailed}</StatusMessage>
+      <Button variant="secondary" onClick={onRetry}>
+        {copy.retry}
+      </Button>
     </div>
   );
 }

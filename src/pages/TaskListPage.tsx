@@ -2,19 +2,28 @@ import { AddTaskForm } from '../components/AddTaskForm';
 import { FailureNotice } from '../components/FailureNotice';
 import { StatusMessage } from '../components/StatusMessage';
 import { TaskList } from '../components/TaskList';
-import { TaskListEmpty, TaskListLoading } from '../components/TaskListStates';
+import { SearchLiveRegion, TaskSearch } from '../components/TaskSearch';
+import {
+  TaskListEmpty,
+  TaskListLoading,
+  TaskListNoMatch,
+  TaskListSearchFailed,
+} from '../components/TaskListStates';
 import { UndoMessage } from '../components/UndoMessage';
 import { useAuth } from '../auth/AuthContext';
 import { copy } from '../copy';
 import { FailureNoticeProvider, useFailureNotice } from '../lib/FailureNoticeContext';
 import { TasksProvider } from '../tasks/TasksProvider';
+import type { ListStatus } from '../tasks/tasksContext';
 import { useTasks } from '../tasks/useTasks';
 
 function Body() {
-  const { tasks, status, toggleStatus, editTitle, startDelete } = useTasks();
+  const { tasks, status, toggleStatus, editTitle, startDelete, retrySearch } = useTasks();
   if (status === 'loading') return <TaskListLoading />;
   if (status === 'loadFailed')
     return <StatusMessage kind="alert">{copy.tasksLoadFailed}</StatusMessage>;
+  if (status === 'searchFailed') return <TaskListSearchFailed onRetry={retrySearch} />;
+  if (status === 'noMatch') return <TaskListNoMatch />;
   if (status === 'empty') return <TaskListEmpty />;
   return (
     <TaskList
@@ -26,12 +35,36 @@ function Body() {
   );
 }
 
+/** What a screen reader hears once a search settles: the match count, or that nothing matched. */
+function announcement(
+  status: ListStatus,
+  searchApplied: boolean,
+  searching: boolean,
+  count: number,
+): string {
+  if (status === 'noMatch' && !searching) return copy.searchNoMatch;
+  if (status === 'populated' && searchApplied && !searching) return copy.searchResultCount(count);
+  return '';
+}
+
 function Content() {
-  const { status, addTask, deletePending, undoDelete } = useTasks();
+  const {
+    tasks,
+    status,
+    addTask,
+    deletePending,
+    undoDelete,
+    search,
+    setSearch,
+    searching,
+    searchApplied,
+  } = useTasks();
   const { message, dismiss } = useFailureNotice();
   // Only a list that loaded can take an add: while loading it would race the load, and after a
-  // failed load an added task would never appear.
-  const canAdd = status === 'empty' || status === 'populated';
+  // failed load or failed search an added task would never appear.
+  const canAdd = status === 'empty' || status === 'populated' || status === 'noMatch';
+  // Search needs a list to search: not during the first load, nor after it failed.
+  const canSearch = status !== 'loading' && status !== 'loadFailed';
   return (
     <>
       <div className="page-header">
@@ -39,9 +72,13 @@ function Content() {
         <p className="page-intro">{copy.homeIntro}</p>
       </div>
       {canAdd ? <AddTaskForm onAdd={(title) => void addTask(title)} /> : null}
+      {canSearch ? <TaskSearch value={search} onChange={setSearch} /> : null}
+      <SearchLiveRegion message={announcement(status, searchApplied, searching, tasks.length)} />
       <FailureNotice message={message} onDismiss={dismiss} />
       <UndoMessage visible={deletePending} onUndo={undoDelete} />
-      <Body />
+      <div aria-busy={searching}>
+        <Body />
+      </div>
     </>
   );
 }

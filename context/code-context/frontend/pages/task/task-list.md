@@ -7,12 +7,12 @@ status: Active
 implementation_state: Implemented
 origin: implemented
 design_confidence: Confirmed
-implemented_at: 2026-11-07T11:30:00Z
-implemented_by_commit: 5e5d079192023f299aba9b0516437928284a139a
-implemented_by_task: FEAT-TASK-01-2, FEAT-TASK-02-2, FEAT-TASK-03-2, FEAT-PLAT-01-2
+implemented_at: 2026-11-16T05:40:00Z
+implemented_by_commit: 4e69048419bc93775ee736d3dad01edc05d902b0
+implemented_by_task: FEAT-TASK-01-2, FEAT-TASK-02-2, FEAT-TASK-03-2, FEAT-PLAT-01-2, Task-22
 mapped_from: src/pages/TaskListPage.tsx
 mapped_from_line: 49
-mapped_from_commit: 348d5d456fade24ccb4f8479c4f7943b901b681d
+mapped_from_commit: 4e69048419bc93775ee736d3dad01edc05d902b0
 generated_at: 2026-11-06
 ---
 
@@ -51,6 +51,7 @@ The one working screen of TaskNest: shows the signed-in user's tasks newest firs
 - Delete: row disappears at once and a "Task deleted - Undo" message shows for 5 seconds; Undo restores the row in its place; otherwise the delete is final (TASK-UC-05). No confirmation dialog.
 - Log out: control in the page header ends the session and returns to /signin (AUTH-UC-06).
 - Instant update with rollback (FEAT-PLAT-01): this page owns a single shared optimistic-update mechanism used by add, edit, tick/untick and delete — apply the change to local state immediately (no spinner), send the request in the background, and on failure restore the prior state and show a message that the change could not be saved. Built and tested once. No retry, no offline queue, no cross-tab sync.
+- Search (Task-22): a labelled search box (type=search, 100 character limit) sits between the add form and the failure notice. 300 ms after the last keystroke the trimmed text is sent as GET /api/tasks?search=<text>; a request still in flight is aborted and a response for old text is dropped. Emptying the box (or Escape) brings back the full list. The current list stays on screen, marked busy, while a search runs (no skeleton). A task added or renamed while searching stays visible until the text changes: no client-side re-filtering (DEC-207). A response that lands after the user kept working is merged, not swapped in: tasks added since the request was sent stay on top, later edits win over the response's copy, and tasks deleted since stay gone. Add stays available on a no-match result. A polite status region reads the match count or the no-match text.
 - Theme (Task-21): a sun/moon toggle in the header, on every screen, switches light and dark; the choice is kept on this device, and the default follows the device setting.
 
 ## Page States
@@ -60,6 +61,9 @@ The one working screen of TaskNest: shows the signed-in user's tasks newest firs
 - Populated list (Pending and Completed rows)
 - Title validation message (empty / over 200)
 - Undo message visible (5 seconds)
+- Search box with a result list (matches only)
+- No match: "No tasks match your search." in place of the list
+- Search failed: "Could not search your tasks." with a Retry button that re-runs the same query (DEC-206); add is hidden until the search succeeds. A failed first load keeps its own message and offers no search
 - Save-failed message after rollback
 - Session expired / missing → redirect to /signin
 
@@ -67,7 +71,7 @@ The one working screen of TaskNest: shows the signed-in user's tasks newest firs
 
 - Current user (route guard) — ../../../../../../backend/context/code-context/backend/domains/auth/endpoints/get-current-user.md (EP-AUTH-04)
 - Sign out — ../../../../../../backend/context/code-context/backend/domains/auth/endpoints/logout.md (EP-AUTH-03)
-- List tasks — ../../../../../../backend/context/code-context/backend/domains/task/endpoints/list-tasks.md (EP-TASK-01)
+- List tasks, optionally by title via the search query parameter — ../../../../../../backend/context/code-context/backend/domains/task/endpoints/list-tasks.md (EP-TASK-01)
 - Create task — ../../../../../../backend/context/code-context/backend/domains/task/endpoints/create-task.md (EP-TASK-02)
 - Update task — ../../../../../../backend/context/code-context/backend/domains/task/endpoints/update-task.md (EP-TASK-03)
 - Delete task — ../../../../../../backend/context/code-context/backend/domains/task/endpoints/delete-task.md (EP-TASK-04)
@@ -91,6 +95,7 @@ The one working screen of TaskNest: shows the signed-in user's tasks newest firs
 
 ## Source References
 
+- Task: Task-22 Search tasks by title (decisions DEC-206, DEC-207, DEC-208)
 - Feature: FEAT-TASK-01, FEAT-TASK-02, FEAT-TASK-03, FEAT-AUTH-02, FEAT-PLAT-01, FEAT-PLAT-02
 - Workflow: WF-002, WF-003
 - Business rules: BR-008, BR-010, BR-016, BR-018, BR-023, BR-025, BR-026
@@ -120,3 +125,10 @@ The one working screen of TaskNest: shows the signed-in user's tasks newest firs
 - [test › src/tasks/usePendingDelete.test.tsx]
 - [test › src/pages/TaskListPage.delete.test.tsx]
 - [test › e2e/task-delete.spec.ts]
+- [code › src/components/TaskSearch.tsx] (search box and live region, Task-22)
+- [code › src/tasks/TasksProvider.tsx] (debounced query, abort and stale-response drop, search states, Task-22)
+- [code › src/components/TaskListStates.tsx] (no-match and search-failed with Retry, Task-22)
+- [code › src/api/tasks.ts] (listTasks search option, Task-22)
+- [test › src/components/TaskSearch.test.tsx]
+- [test › src/pages/TaskListPage.search.test.tsx]
+- [test › e2e/task-search.spec.ts]

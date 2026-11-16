@@ -23,6 +23,8 @@ export function insertTemp(list: Task[], task: Task): Task[] {
 
 /** Swaps a temporary row for the stored task, keeping its position. */
 export function replaceId(list: Task[], tempId: string, stored: Task): Task[] {
+  // A search response may already have brought the stored row in; then the temporary one just goes.
+  if (list.some((task) => task.id === stored.id)) return removeById(list, tempId);
   return list.map((task) => (task.id === tempId ? stored : task));
 }
 
@@ -55,4 +57,42 @@ export function indexByCreatedAt(list: Task[], task: Task): number {
   const at = Date.parse(task.createdAt);
   const index = list.findIndex((row) => Date.parse(row.createdAt) < at);
   return index === -1 ? list.length : index;
+}
+
+/** True when a row's title or status differs from what it was when the request went out. */
+function changedSince(sent: Task | undefined, now: Task): boolean {
+  return sent !== undefined && (sent.title !== now.title || sent.status !== now.status);
+}
+
+/**
+ * What a search response becomes once the user has kept working while it was in flight.
+ * `sent` is the list when the request went out, `now` the list as it is when the answer lands.
+ * Rows added since stay on top in their current order; rows edited since keep their current
+ * values over the response's; rows deleted since stay gone. Everything else is the response.
+ */
+export function mergeSearchResult(response: Task[], sent: Task[], now: Task[]): Task[] {
+  const sentById = new Map(sent.map((task) => [task.id, task]));
+  const nowById = new Map(now.map((task) => [task.id, task]));
+  const added = now.filter((task) => !sentById.has(task.id));
+  const addedIds = new Set(added.map((task) => task.id));
+  const rest = response
+    .filter((row) => !addedIds.has(row.id) && (nowById.has(row.id) || !sentById.has(row.id)))
+    .map((row) => {
+      const current = nowById.get(row.id);
+      if (!current || !changedSince(sentById.get(row.id), current)) return row;
+      return { ...row, title: current.title, status: current.status };
+    });
+  return [...added, ...rest];
+}
+
+/** True when the row was edited after the request went out, so the response's copy is stale. */
+export function editedSince(sent: Task[], now: Task[], id: string): boolean {
+  const current = now.find((task) => task.id === id);
+  return (
+    current !== undefined &&
+    changedSince(
+      sent.find((task) => task.id === id),
+      current,
+    )
+  );
 }

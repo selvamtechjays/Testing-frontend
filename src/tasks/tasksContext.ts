@@ -2,11 +2,22 @@ import { createContext } from 'react';
 import type { Task } from '../api/types';
 
 /** Which body the task list shows. */
-export type ListStatus = 'loading' | 'empty' | 'populated' | 'loadFailed';
+export type ListStatus =
+  'loading' | 'empty' | 'populated' | 'loadFailed' | 'noMatch' | 'searchFailed';
 
 export interface TasksValue {
   tasks: Task[];
   status: ListStatus;
+  /** The search box's current text; updates on every keystroke. */
+  search: string;
+  /** Sets the box's text; the list follows 300 ms after the last keystroke. */
+  setSearch: (text: string) => void;
+  /** Runs the current query again after a failed search. */
+  retrySearch: () => void;
+  /** True while a request is in flight after the first load; the list stays on screen. */
+  searching: boolean;
+  /** True when the list on screen is the result of a non-empty search. */
+  searchApplied: boolean;
   /** Shows the task at the top at once and saves in the background; resolves false if the save failed. */
   addTask: (title: string) => Promise<boolean>;
   /** Ticks a Pending task or unticks a Completed one; the row keeps its place. */

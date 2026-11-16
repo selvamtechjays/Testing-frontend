@@ -52,6 +52,34 @@
   flex: 0 1 45%;
 }
 
+/* No match: same card as empty, without the illustration */
+.task-list-no-match {
+  padding: var(--space-5) var(--space-4);
+}
+
+.task-list-no-match .task-list-empty-text {
+  margin-inline: auto;
+}
+
+/* Failed search: the alert and its Retry sit together. */
+.task-list-search-failed {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: var(--space-3);
+}
+
+.task-list-search-failed .message {
+  margin: 0;
+}
+
+@media (min-width: 48rem) {
+  .task-list-search-failed {
+    flex-direction: row;
+    align-items: center;
+  }
+}
+
 /* Empty */
 .task-list-empty {
   display: flex;
