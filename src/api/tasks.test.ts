@@ -6,7 +6,7 @@ import { buildTask } from '../test/builders/task';
 import { ApiError, setUnauthorizedHandler } from './client';
 import { createTask, deleteTask, listTasks, updateTask } from './tasks';
 
-describe('tasks from a server that leaves out the due date and priority', () => {
+describe('tasks from a server that leaves out the due date, priority and notes', () => {
   // An API older than Task-23 (or a row written before it) sends neither field. Unnormalised,
   // `dueDate` arrives as undefined and the row crashed formatting it (fix-review round 1).
   const bare = {
@@ -15,14 +15,14 @@ describe('tasks from a server that leaves out the due date and priority', () => 
     status: 'pending',
     createdAt: '2026-11-07T12:00:00.000Z',
   };
-  const normalised = { ...bare, dueDate: null, priority: 'medium' };
+  const normalised = { ...bare, dueDate: null, priority: 'medium', notes: null };
 
-  it('reads them as no due date and Medium from the list (DEC-210)', async () => {
+  it('reads them as no due date, Medium and no notes from the list (DEC-210, DEC-240)', async () => {
     server.use(http.get('/api/tasks', () => HttpResponse.json({ tasks: [bare] })));
     await expect(listTasks()).resolves.toEqual({ tasks: [normalised] });
   });
 
-  it('reads them as no due date and Medium from create and update (DEC-210)', async () => {
+  it('reads them as no due date, Medium and no notes from create and update (DEC-210, DEC-240)', async () => {
     server.use(
       http.post('/api/tasks', () => HttpResponse.json({ task: bare }, { status: 201 })),
       http.patch('/api/tasks/:id', () => HttpResponse.json({ task: bare })),
@@ -262,5 +262,59 @@ describe('task API calls', () => {
       await updateTask('t1', { dueDate: null });
       expect(body).toEqual({ dueDate: null });
     });
+  });
+});
+
+describe('task notes over the wire (Task-24)', () => {
+  it('listTasks returns the notes the server sent, and none as null (AC-1)', async () => {
+    const withNotes = buildTask({ id: 'n1', notes: 'Call Ravi 98400 12345' });
+    const without = buildTask({ id: 'n2', notes: null });
+    server.use(http.get('/api/tasks', () => HttpResponse.json({ tasks: [withNotes, without] })));
+    const { tasks } = await listTasks();
+    expect(tasks.map((t) => t.notes)).toEqual(['Call Ravi 98400 12345', null]);
+  });
+
+  it('updateTask sends notes as text, and null to clear them (AC-2)', async () => {
+    const bodies: unknown[] = [];
+    server.use(
+      http.patch('/api/tasks/:id', async ({ request }) => {
+        bodies.push(await request.json());
+        return HttpResponse.json({ task: buildTask({ notes: null }) });
+      }),
+    );
+    await updateTask('t1', { notes: 'Buy two tins' });
+    await updateTask('t1', { notes: null });
+    expect(bodies).toEqual([{ notes: 'Buy two tins' }, { notes: null }]);
+  });
+
+  it('updateTask refuses with the notes message the server sends (AC-7)', async () => {
+    server.use(
+      http.patch('/api/tasks/:id', () =>
+        HttpResponse.json(
+          {
+            error: {
+              code: 'VALIDATION',
+              message: 'Check the highlighted field.',
+              fields: { notes: 'Notes can be at most 1000 characters.' },
+            },
+          },
+          { status: 400 },
+        ),
+      ),
+    );
+    await expect(updateTask('t1', { notes: 'x' })).rejects.toMatchObject({ status: 400 });
+  });
+
+  it('listTasks never sends the notes anywhere in the search query (AC-4)', async () => {
+    let url = '';
+    server.use(
+      http.get('/api/tasks', ({ request }) => {
+        url = request.url;
+        return HttpResponse.json({ tasks: [] });
+      }),
+    );
+    await listTasks({ search: 'ravi' });
+    expect(new URL(url).searchParams.get('search')).toBe('ravi');
+    expect(new URL(url).searchParams.has('notes')).toBe(false);
   });
 });

@@ -34,7 +34,7 @@ export function removeById(list: Task[], id: string): Task[] {
 }
 
 /** Changes exactly one field of one row, leaving every other row and field as it is. */
-export function patchField<K extends 'title' | 'status' | 'dueDate' | 'priority'>(
+export function patchField<K extends 'title' | 'status' | 'dueDate' | 'priority' | 'notes'>(
   list: Task[],
   id: string,
   field: K,
@@ -67,7 +67,8 @@ function changedSince(sent: Task | undefined, now: Task): boolean {
     (sent.title !== now.title ||
       sent.status !== now.status ||
       sent.dueDate !== now.dueDate ||
-      sent.priority !== now.priority)
+      sent.priority !== now.priority ||
+      sent.notes !== now.notes)
   );
 }
 
@@ -93,6 +94,7 @@ export function mergeSearchResult(response: Task[], sent: Task[], now: Task[]): 
         status: current.status,
         dueDate: current.dueDate,
         priority: current.priority,
+        notes: current.notes,
       };
     });
   return [...added, ...rest];

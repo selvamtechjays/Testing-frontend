@@ -84,6 +84,7 @@ describe('TaskList', () => {
         onEditTitle={noop}
         onChangeDueDate={noop}
         onChangePriority={noop}
+        onChangeNotes={noop}
         onDelete={noop}
       />,
     );

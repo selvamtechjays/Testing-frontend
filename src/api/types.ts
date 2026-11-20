@@ -13,6 +13,8 @@ export interface Task {
   /** A calendar date, YYYY-MM-DD, with no time or zone; null when the task has none. */
   dueDate: string | null;
   priority: TaskPriority;
+  /** One optional plain-text note, at most 1000 characters; null when the task has none (Task-24). */
+  notes: string | null;
 }
 
 /** What the list can be narrowed by and sorted on (EP-TASK-01). The first value of each is "no filter". */

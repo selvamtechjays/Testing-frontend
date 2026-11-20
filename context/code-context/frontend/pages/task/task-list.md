@@ -7,12 +7,12 @@ status: Active
 implementation_state: Implemented
 origin: implemented
 design_confidence: Confirmed
-implemented_at: 2026-11-16T10:40:00Z
-implemented_by_commit: 119a652f634a6f2645edf547d9edd6e210903288
-implemented_by_task: FEAT-TASK-01-2, FEAT-TASK-02-2, FEAT-TASK-03-2, FEAT-PLAT-01-2, Task-22, Task-23
+implemented_at: 2026-11-16T13:15:05Z
+implemented_by_commit: 29c1997b7dcdcf2eeb26714d7dea3f4931f3027f
+implemented_by_task: FEAT-TASK-01-2, FEAT-TASK-02-2, FEAT-TASK-03-2, FEAT-PLAT-01-2, Task-22, Task-23, Task-24
 mapped_from: src/pages/TaskListPage.tsx
 mapped_from_line: 143
-mapped_from_commit: 119a652f634a6f2645edf547d9edd6e210903288
+mapped_from_commit: 29c1997b7dcdcf2eeb26714d7dea3f4931f3027f
 generated_at: 2026-11-06
 ---
 
@@ -55,6 +55,7 @@ The one working screen of TaskNest: shows the signed-in user's tasks newest firs
 - Due date and priority (Task-23): the add form gains a labelled native date input (picker capped at local today + 5 years, DEC-211; a typed date beyond the cap is refused with the alert "A due date can be at most five years ahead.", on the add form and on a row) and a labelled Priority select with Medium preselected; both reset after an add and a skipped pair still adds in one step. Each row shows its priority as a word ("High priority") and its due text: "Overdue" for a pending task before today, "Due today", or "Due <date>"; a completed row never reads Overdue. Each row has a "Due date for <title>" input, a "Clear date for <title>" button and a "Priority for <title>" select; every change shows at once and goes through the shared optimistic path (changeDueDate, changePriority), rolling back to the confirmed value with the usual failure message if the save is refused. "Today" is built from the local year, month and day, never from toISOString, and is sent as `today` on every list request (DEC-214, DEC-218).
 - Filters and sort (Task-23): a labelled group of four native selects (Status, Priority, Due, Sort) sits under the search box. A change applies at once with no debounce, aborts the request in flight, and is remembered for this user on this device under `tasknest-filters:<userId>`; the search text is never stored (DEC-217). Clear filters shows only while a choice differs from its default (a sort counts), restores the defaults and keeps the search text. Only status, priority and due narrow the list: a sort alone on an empty list is the first-task prompt, never "No tasks match your filters." (DEC-236). "Today" is also re-read when the tab turns visible or the window regains focus, and sets the date boxes' cap and each row's due words. Results are never re-filtered on the client (extends DEC-207).
 - Overdue summary (Task-23): a real button "N overdue", hidden at 0, counts every pending overdue task whatever the filters or search (DEC-212). Selecting it sets Due to Overdue and resets Status to All (overdue tasks are always pending), keeping Priority, Sort and the search text (DEC-234). The count comes from the last list response and moves by overdueDelta after each confirmed add, edit or delete (DEC-219); a response's number is taken only if no change started, settled or is still saving since its request, and a task whose delete is held or saving stays out of every reload (DEC-235).
+- Task notes (Task-24): every row has a Notes button named "Notes for <title>" (`aria-expanded`, and `aria-controls` pointing at the panel while it is open; off while the row's add is unsaved or the row is leaving) and, when the task has notes, a "Has notes" chip beside its status, priority and due words. The button opens a panel inside the row, below its fields: a labelled textarea ("Notes for <title>", `maxLength` 1000, newlines allowed, focused on open), a "N characters left" line tied to it by `aria-describedby` (announced politely only at 0), and Save, Cancel and, when notes are saved, Clear notes. Save sends `{ notes }` through the shared optimistic path (`changeNotes`) only when the trimmed text differs from the saved notes (empty or spaces = null = no notes, DEC-240), closes the panel and returns focus to that row's Notes button (DEC-239); a refused save restores the confirmed notes with the usual failure message. Clear notes swaps the buttons for an in-panel "Clear these notes?" confirmation (Clear notes / Keep notes; Keep returns focus to Clear notes). Only one panel is open at a time, held by `TaskList` (`openId`). Escape, handled on the panel and never on the document, backs out of the confirmation or otherwise closes like Cancel. Any close that loses a typed change (Escape, Cancel, Notes pressed on the open row, opening another row's panel, the open row leaving the list) sets one polite line, "Your changes to the notes were not saved.", cleared when any panel opens (DEC-238, DEC-242, DEC-251). The draft follows a changed saved value only while the box holds no unsaved change. Search never looks at notes; adding a task stays one step (no notes on the add form).
 - Theme (Task-21): a sun/moon toggle in the header, on every screen, switches light and dark; the choice is kept on this device, and the default follows the device setting.
 
 ## Page States
@@ -70,6 +71,7 @@ The one working screen of TaskNest: shows the signed-in user's tasks newest firs
 - Filters active with a list: the filter bar shows Clear filters; the polite status region reads "N tasks found."
 - No filter match: "No tasks match your filters." with a Clear filters button (when filters are active; search-only no match keeps the search text)
 - Overdue summary visible ("N overdue") above the list
+- Row with the "Has notes" chip; row with its notes panel open (editing, or confirming "Clear these notes?"); the not-saved line after a panel closed with a typed change
 - Save-failed message after rollback
 - Session expired / missing → redirect to /signin
 
@@ -79,7 +81,7 @@ The one working screen of TaskNest: shows the signed-in user's tasks newest firs
 - Sign out — ../../../../../../backend/context/code-context/backend/domains/auth/endpoints/logout.md (EP-AUTH-03)
 - List tasks, narrowed by title search, status, priority and due, ordered by sort, with `today` on every call and `overdueCount` in the answer — ../../../../../../backend/context/code-context/backend/domains/task/endpoints/list-tasks.md (EP-TASK-01)
 - Create task — ../../../../../../backend/context/code-context/backend/domains/task/endpoints/create-task.md (EP-TASK-02)
-- Update task — ../../../../../../backend/context/code-context/backend/domains/task/endpoints/update-task.md (EP-TASK-03)
+- Update task (title, status, due date, priority and notes, `notes: null` clears) — ../../../../../../backend/context/code-context/backend/domains/task/endpoints/update-task.md (EP-TASK-03)
 - Delete task — ../../../../../../backend/context/code-context/backend/domains/task/endpoints/delete-task.md (EP-TASK-04)
 
 ## Used by Features
@@ -102,6 +104,7 @@ The one working screen of TaskNest: shows the signed-in user's tasks newest firs
 ## Source References
 
 - Task: Task-22 Search tasks by title (decisions DEC-206, DEC-207, DEC-208)
+- Task: Task-24 Task notes (decisions DEC-237 to DEC-242, DEC-250, DEC-251)
 - Task: Task-23 Due dates, priority, and list filters (decisions DEC-210 to DEC-219, DEC-230 to DEC-232)
 - Feature: FEAT-TASK-01, FEAT-TASK-02, FEAT-TASK-03, FEAT-AUTH-02, FEAT-PLAT-01, FEAT-PLAT-02
 - Workflow: WF-002, WF-003
@@ -158,3 +161,14 @@ The one working screen of TaskNest: shows the signed-in user's tasks newest firs
 - [test › src/components/OverdueSummary.test.tsx]
 - [test › src/pages/TaskListPage.filters.test.tsx]
 - [test › e2e/task-due-priority.spec.ts]
+- [code › src/components/TaskNotesPanel.tsx] (notes panel: textarea, character count, Save, Cancel, Clear notes confirmation, Escape, Task-24)
+- [code › src/validation/notes.ts] (NOTES_MAX, normaliseNotes, notesLeft, Task-24)
+- [code › src/components/TaskList.tsx] (open panel id and the not-saved line, Task-24)
+- [code › src/components/TaskRow.tsx] (Has notes chip, Notes button, panel mount and focus return, Task-24)
+- [code › src/tasks/TasksProvider.tsx] (changeNotes through the shared optimistic path, Task-24)
+- [code › src/api/tasks.ts] (notes on Task, TaskPatch and toTask, Task-24)
+- [test › src/components/TaskNotesPanel.test.tsx]
+- [test › src/components/TaskRow.notes.test.tsx]
+- [test › src/pages/TaskListPage.notes.test.tsx]
+- [test › src/validation/notes.test.ts]
+- [test › e2e/task-notes.spec.ts]

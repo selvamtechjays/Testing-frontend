@@ -497,3 +497,89 @@ describe('useTasks filters (Task-23)', () => {
     expect(hook.result.current.list.tasks).toHaveLength(1);
   });
 });
+
+describe('useTasks notes (Task-24)', () => {
+  const noted = buildTask({ id: 'k', title: 'Kitchen', notes: 'Call Ravi 98400 12345' });
+
+  it('shows new notes at once and sends only the notes (AC-7 AC-2)', async () => {
+    const hook = await setup([noted]);
+    const gates = gatedPatch();
+    let done: Promise<boolean> | undefined;
+    act(() => {
+      done = hook.result.current.list.changeNotes('k', 'Buy two tins');
+    });
+    expect(hook.result.current.list.tasks[0].notes).toBe('Buy two tins');
+    await waitFor(() => expect(gates).toHaveLength(1));
+    expect(gates[0].body).toEqual({ notes: 'Buy two tins' });
+    await act(async () => {
+      gates[0].release(200);
+      await done;
+    });
+    expect(hook.result.current.list.tasks[0].notes).toBe('Buy two tins');
+    expect(hook.result.current.notice.message).toBeNull();
+  });
+
+  it('clears the notes with null and sends null (AC-2)', async () => {
+    const hook = await setup([noted]);
+    const gates = gatedPatch();
+    let done: Promise<boolean> | undefined;
+    act(() => {
+      done = hook.result.current.list.changeNotes('k', null);
+    });
+    expect(hook.result.current.list.tasks[0].notes).toBeNull();
+    await waitFor(() => expect(gates).toHaveLength(1));
+    expect(gates[0].body).toEqual({ notes: null });
+    await act(async () => {
+      gates[0].release(200);
+      await done;
+    });
+  });
+
+  it('restores the confirmed notes and shows the message on a refused save (AC-7)', async () => {
+    const hook = await setup([noted]);
+    server.use(
+      http.patch('/api/tasks/:id', () => HttpResponse.json(serverErrorBody, { status: 500 })),
+    );
+    await act(async () => {
+      await hook.result.current.list.changeNotes('k', 'Something else');
+    });
+    expect(hook.result.current.list.tasks[0].notes).toBe('Call Ravi 98400 12345');
+    expect(hook.result.current.notice.message).toBe(SAVE_FAILED);
+  });
+
+  it('restores no notes when clearing a note-less task was never saved, and sends nothing for an unchanged value (AC-7)', async () => {
+    const plain = buildTask({ id: 'p', title: 'Plain', notes: null });
+    const hook = await setup([plain]);
+    let calls = 0;
+    server.use(
+      http.patch('/api/tasks/:id', () => {
+        calls += 1;
+        return HttpResponse.json(serverErrorBody, { status: 500 });
+      }),
+    );
+    await act(async () => {
+      await hook.result.current.list.changeNotes('p', null);
+    });
+    expect(calls).toBe(0);
+    expect(hook.result.current.list.tasks[0].notes).toBeNull();
+  });
+
+  it('never moves the overdue count (notes are not a due-date change)', async () => {
+    server.use(
+      http.get('/api/tasks', () => HttpResponse.json({ tasks: [noted], overdueCount: 3 })),
+    );
+    const hook = renderHook(() => useTasks(), { wrapper });
+    await waitFor(() => expect(hook.result.current.status).toBe('populated'));
+    const gates = gatedPatch();
+    let done: Promise<boolean> | undefined;
+    act(() => {
+      done = hook.result.current.changeNotes('k', 'New');
+    });
+    await waitFor(() => expect(gates).toHaveLength(1));
+    await act(async () => {
+      gates[0].release(200);
+      await done;
+    });
+    expect(hook.result.current.overdueCount).toBe(3);
+  });
+});

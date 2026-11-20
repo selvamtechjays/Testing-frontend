@@ -41,6 +41,8 @@ export interface TasksValue {
   changeDueDate: (id: string, dueDate: string | null) => Promise<boolean>;
   /** Changes the priority at once and saves it; a failed save restores the stored priority. */
   changePriority: (id: string, priority: TaskPriority) => Promise<boolean>;
+  /** Changes the notes (null clears them) at once and saves them; a failed save restores the stored notes. */
+  changeNotes: (id: string, notes: string | null) => Promise<boolean>;
   /** Removes the task at once and offers Undo for 5 seconds; the delete is sent when the window ends. */
   startDelete: (id: string) => Promise<boolean>;
   /** Puts the pending deletion back, in its place, without any request. */

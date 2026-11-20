@@ -15,6 +15,8 @@ export interface TaskPatch {
   /** A calendar date, or null to clear it. */
   dueDate?: string | null;
   priority?: TaskPriority;
+  /** Plain text of at most 1000 characters, or null to clear it (Task-24). */
+  notes?: string | null;
 }
 
 /** What a new task is made from; a missing date and priority mean no date and Medium. */
@@ -40,16 +42,22 @@ export interface TaskListResult {
   overdueCount?: number;
 }
 
-/** A task as the server sent it: an older API, or a row written before Task-23, may lack the two fields. */
-type WireTask = Omit<Task, 'dueDate' | 'priority'> & Partial<Pick<Task, 'dueDate' | 'priority'>>;
+/** A task as the server sent it: an older API, or a row written before Task-23 or Task-24, may lack these fields. */
+type WireTask = Omit<Task, 'dueDate' | 'priority' | 'notes'> &
+  Partial<Pick<Task, 'dueDate' | 'priority' | 'notes'>>;
 
 /**
  * Every task enters the app through here, so a missing due date reads as none and a missing
- * priority as Medium (the same rule the server applies to older rows, DEC-210). A field the
- * server left out must never crash the list.
+ * priority as Medium (the same rule the server applies to older rows, DEC-210), and a missing note as
+ * no notes (DEC-240). A field the server left out must never crash the list.
  */
 export function toTask(wire: WireTask): Task {
-  return { ...wire, dueDate: wire.dueDate ?? null, priority: wire.priority ?? 'medium' };
+  return {
+    ...wire,
+    dueDate: wire.dueDate ?? null,
+    priority: wire.priority ?? 'medium',
+    notes: wire.notes ?? null,
+  };
 }
 
 /**
@@ -82,7 +90,7 @@ export async function createTask(input: NewTask, signal?: AbortSignal): Promise<
   return { task: toTask(task) };
 }
 
-/** PATCH /api/tasks/:id (EP-TASK-03). Used for tick, untick and edits of the title, due date and priority. */
+/** PATCH /api/tasks/:id (EP-TASK-03). Used for tick, untick and edits of the title, due date, priority and notes. */
 export async function updateTask(
   id: string,
   patch: TaskPatch,

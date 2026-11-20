@@ -1,0 +1,106 @@
+/* Notes panel: sits inside its row, under the row's fields. Tokens only; light and dark come from them. */
+.task-notes {
+  display: flex;
+  flex: 1 1 100%;
+  flex-direction: column;
+  gap: var(--space-2);
+  padding: var(--space-3);
+  border: 1px solid var(--color-divider);
+  border-radius: var(--radius-md);
+  background: var(--color-surface);
+  box-shadow: var(--shadow-raised);
+  animation: task-notes-enter var(--duration-base) var(--ease-standard) both;
+}
+
+.task-notes.task-notes--leaving {
+  overflow: hidden;
+  pointer-events: none;
+  animation: task-notes-leave var(--duration-base) var(--ease-standard) forwards;
+}
+
+/* The shared control rules cover input and select only, so the textarea repeats them from tokens. */
+.task-notes-input {
+  box-sizing: border-box;
+  width: 100%;
+  min-height: calc(var(--control-height) * 2);
+  padding: var(--space-2) var(--space-3);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-sm);
+  background: var(--color-surface);
+  color: var(--color-text);
+  font: inherit;
+  resize: vertical;
+  transition:
+    border-color var(--duration-fast) var(--ease-standard),
+    box-shadow var(--duration-base) var(--ease-standard);
+}
+
+.task-notes-input:hover {
+  border-color: var(--color-border-strong);
+}
+
+.task-notes-input:focus-visible {
+  border-color: var(--color-primary);
+  box-shadow: var(--shadow-focus-glow);
+}
+
+.task-notes-count {
+  margin: 0;
+  color: var(--color-muted);
+  font-size: var(--font-size-sm);
+  line-height: var(--line-height-sm);
+}
+
+/* Read by assistive tech when the limit is reached, never drawn. */
+.task-notes-live {
+  position: absolute;
+  width: 0.0625rem;
+  height: 0.0625rem;
+  margin: -0.0625rem;
+  padding: 0;
+  overflow: hidden;
+  clip-path: inset(50%);
+}
+
+.task-notes-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-2);
+}
+
+.task-notes-confirm {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+}
+
+.task-notes-confirm-text {
+  margin: 0;
+  font-weight: var(--font-weight-semibold);
+}
+
+@media (min-width: 48rem) {
+  .task-notes {
+    margin-left: calc(var(--control-height) + var(--space-3));
+    padding: var(--space-4);
+  }
+}
+
+@keyframes task-notes-enter {
+  from {
+    opacity: 0;
+    transform: translateY(-0.5rem);
+  }
+
+  to {
+    opacity: 1;
+    transform: none;
+  }
+}
+
+@keyframes task-notes-leave {
+  to {
+    opacity: 0;
+    transform: translateY(-0.5rem);
+  }
+}

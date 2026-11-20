@@ -27,7 +27,7 @@ import { usePendingDelete } from './usePendingDelete';
 import { TasksContext, type ListStatus, type TasksValue } from './tasksContext';
 
 type LoadState = 'loading' | 'ready' | 'failed' | 'searchFailed';
-type EditableField = 'title' | 'status' | 'dueDate' | 'priority';
+type EditableField = 'title' | 'status' | 'dueDate' | 'priority' | 'notes';
 type Stored = Pick<Task, EditableField>;
 
 /** How long the box must sit still before its text becomes the query that is sent. */
@@ -87,6 +87,7 @@ const toStored = (task: Task): Stored => ({
   status: task.status,
   dueDate: task.dueDate,
   priority: task.priority,
+  notes: task.notes,
 });
 
 /** The user's calendar date as of the last request (DEC-218), readable synchronously by actions. */
@@ -339,6 +340,7 @@ function useAddTask({ commit, remember, todayRef, adjustOverdue, beginChange }: 
         createdAt: new Date().toISOString(),
         dueDate: input.dueDate ?? null,
         priority: input.priority ?? 'medium',
+        notes: null,
       };
       const settled = beginChange();
       return run({
@@ -420,7 +422,12 @@ function useFieldChanges(store: TaskStore) {
     [changeField],
   );
 
-  return { toggleStatus, editTitle, changeDueDate, changePriority };
+  const changeNotes = useCallback(
+    (id: string, notes: string | null) => changeField(id, 'notes', notes),
+    [changeField],
+  );
+
+  return { toggleStatus, editTitle, changeDueDate, changePriority, changeNotes };
 }
 
 /**
@@ -477,7 +484,7 @@ type Actions = ReturnType<typeof useFieldChanges> &
 function useTasksValue(store: TaskStore, actions: Actions): TasksValue {
   const { tasks, load, search, setSearch, retrySearch, searching, appliedQuery } = store;
   const { filters, setFilter, clearFilters, filtersApplied, today, overdueCount } = store;
-  const { addTask, toggleStatus, editTitle, changeDueDate, changePriority } = actions;
+  const { addTask, toggleStatus, editTitle, changeDueDate, changePriority, changeNotes } = actions;
   const { startDelete, undoDelete, deletePending } = actions;
   return useMemo<TasksValue>(
     () => ({
@@ -499,6 +506,7 @@ function useTasksValue(store: TaskStore, actions: Actions): TasksValue {
       editTitle,
       changeDueDate,
       changePriority,
+      changeNotes,
       startDelete,
       undoDelete,
       deletePending,
@@ -522,6 +530,7 @@ function useTasksValue(store: TaskStore, actions: Actions): TasksValue {
       editTitle,
       changeDueDate,
       changePriority,
+      changeNotes,
       startDelete,
       undoDelete,
       deletePending,

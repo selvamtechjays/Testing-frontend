@@ -64,6 +64,8 @@ describe('task list reducers', () => {
     expect(result[2]).toBe(c);
     expect(list[1]).toBe(b);
     expect(patchField(list, 'b', 'title', 'Renamed')[1].title).toBe('Renamed');
+    expect(patchField(list, 'b', 'notes', 'Call Ravi')[1].notes).toBe('Call Ravi');
+    expect(patchField([{ ...b, notes: 'x' }], 'b', 'notes', null)[0].notes).toBeNull();
   });
 
   it('restores a field without touching a later change to another field (AC-4 AC-5)', () => {
@@ -137,6 +139,12 @@ describe('mergeSearchResult (a response that lands after the user kept working)'
   it('lets edits made since the request went out win over the response', () => {
     const renamed = edited(b, { title: 'B2', status: 'completed' });
     expect(mergeSearchResult([b, c], [a, b, c], [a, renamed, c])).toEqual([renamed, c]);
+  });
+
+  it('keeps notes edited since the request went out over the response (Task-24 AC-7)', () => {
+    const noted = edited(b, { notes: 'Call Ravi' });
+    expect(mergeSearchResult([b, c], [a, b, c], [a, noted, c])).toEqual([noted, c]);
+    expect(editedSince([a, b], [a, noted], 'b')).toBe(true);
   });
 
   it('keeps a row deleted since the request went out gone', () => {
