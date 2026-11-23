@@ -1,24 +1,19 @@
-import {
-  useEffect,
-  useMemo,
-  useRef,
-  useState,
-  type FormEvent,
-  type KeyboardEvent,
-  type Ref,
-} from 'react';
+import { useEffect, useRef, useState, type FormEvent, type KeyboardEvent, type Ref } from 'react';
 import type { Task, TaskPriority } from '../api/types';
 import { copy, PRIORITY_OPTIONS } from '../copy';
 import { dueState, formatDueDate, isBeyondMax, maxDueDate } from '../lib/localDate';
-import { exitDurationMs } from '../lib/motion';
 import { notesPanelId } from '../lib/notesPanelId';
 import { isTempId } from '../tasks/taskState';
 import { clampTitle, validateTitle } from '../validation/title';
 import { Button } from './Button';
 import { SelectField } from './SelectField';
+import { TagChips } from './TagChips';
 import { TaskNotesPanel } from './TaskNotesPanel';
+import { PanelToggleButton } from './PanelToggleButton';
+import { TagsButton, type RowTags, type TagsButtonProps } from './TaskRowTags';
+import { useTagsRow } from './useTagsRow';
 import { TextField } from './TextField';
-import { useExitingItems } from './useExitingItems';
+import { useRowPanel, type PanelButtonProps } from './useRowPanel';
 import './TaskRow.css';
 
 /** How the list drives this row's notes panel; a row given none shows no Notes button. */
@@ -33,6 +28,8 @@ export interface RowNotes {
   onDirtyChange: (dirty: boolean) => void;
 }
 
+export type { RowTags };
+
 interface TaskRowProps {
   task: Task;
   /** The user's calendar date, which decides the Overdue and Due today words. */
@@ -43,6 +40,8 @@ interface TaskRowProps {
   onChangePriority: (id: string, priority: TaskPriority) => Promise<boolean>;
   onDelete: (id: string) => Promise<boolean>;
   notes?: RowNotes;
+  /** How the list drives this row's tags picker; a row given none shows no Tags button. */
+  tags?: RowTags;
   /** The row was removed and is animating out: hidden from assistive tech, every control off. */
   leaving?: boolean;
 }
@@ -118,34 +117,12 @@ function dueText(task: Task, today: string): string | null {
   return task.dueDate === null ? null : copy.dueOn(formatDueDate(task.dueDate));
 }
 
-interface NotesButtonProps {
-  ref: Ref<HTMLButtonElement>;
-  open: boolean;
-  panelId: string;
-  onClick: () => void;
-}
+type NotesButtonProps = PanelButtonProps;
 
 /** The Notes button: named for its task, and pointing at the panel while that is open. */
-function NotesButton({
-  title,
-  disabled,
-  ref,
-  open,
-  panelId,
-  onClick,
-}: NotesButtonProps & { title: string; disabled: boolean }) {
+function NotesButton({ title, ...props }: NotesButtonProps & { title: string; disabled: boolean }) {
   return (
-    <Button
-      variant="secondary"
-      ref={ref}
-      disabled={disabled}
-      aria-label={copy.notesButtonLabel(title)}
-      aria-expanded={open}
-      aria-controls={open ? panelId : undefined}
-      onClick={onClick}
-    >
-      {copy.notesButton}
-    </Button>
+    <PanelToggleButton {...props} label={copy.notesButtonLabel(title)} text={copy.notesButton} />
   );
 }
 
@@ -156,6 +133,8 @@ interface TaskRowViewProps {
   inactive: boolean;
   editRef: Ref<HTMLButtonElement>;
   notesButton: NotesButtonProps | null;
+  tagsButton: TagsButtonProps | null;
+  onSelectTag?: (tagId: string) => void;
   onEdit: () => void;
   onDelete: () => void;
 }
@@ -168,6 +147,8 @@ function TaskRowView({
   inactive,
   editRef,
   notesButton,
+  tagsButton,
+  onSelectTag,
   onEdit,
   onDelete,
 }: TaskRowViewProps) {
@@ -192,6 +173,7 @@ function TaskRowView({
               {due}
             </span>
           ) : null}
+          <TagChips tags={task.tags} selectable={!inactive} onSelect={onSelectTag} />
         </div>
       </div>
       <div className="task-row-actions">
@@ -201,6 +183,7 @@ function TaskRowView({
         {notesButton ? (
           <NotesButton title={task.title} disabled={inactive} {...notesButton} />
         ) : null}
+        {tagsButton ? <TagsButton title={task.title} disabled={inactive} {...tagsButton} /> : null}
         <Button
           variant="danger"
           disabled={inactive}
@@ -325,33 +308,12 @@ function useReturnFocus(editing: boolean) {
  * button hands focus back to the button; being closed because another row opened does not.
  */
 function useNotesRow(task: Task, notes: RowNotes | undefined) {
-  const open = notes?.open ?? false;
-  const buttonRef = useRef<HTMLButtonElement>(null);
-  const refocus = useRef(false);
-  const wasOpen = useRef(false);
-  const [exitMs] = useState(exitDurationMs);
-  const items = useMemo(() => (open ? [{ id: notesPanelId(task.id) }] : []), [open, task.id]);
-  const shown = useExitingItems(items, exitMs);
-
-  useEffect(() => {
-    if (wasOpen.current && !open && refocus.current) buttonRef.current?.focus();
-    if (!open) refocus.current = false;
-    wasOpen.current = open;
-  }, [open]);
-
+  const {
+    shown,
+    handBack,
+    button: notesButton,
+  } = useRowPanel(notes?.open ?? false, notesPanelId(task.id), notes?.onToggle);
   if (!notes) return { notesButton: null, panel: null };
-  const handBack = () => {
-    refocus.current = true;
-  };
-  const notesButton = {
-    ref: buttonRef,
-    open,
-    panelId: notesPanelId(task.id),
-    onClick: () => {
-      if (open) handBack();
-      notes.onToggle();
-    },
-  };
   const panel = shown.map(({ item, leaving }) => (
     <TaskNotesPanel
       key={item.id}
@@ -418,6 +380,7 @@ export function TaskRow({
   onChangePriority,
   onDelete,
   notes,
+  tags,
   leaving = false,
 }: TaskRowProps) {
   const [editing, setEditing] = useState(false);
@@ -427,6 +390,7 @@ export function TaskRow({
   const inactive = unsaved || leaving;
   const classes = rowClasses(completed, leaving);
   const { notesButton, panel } = useNotesRow(task, notes);
+  const { tagsButton, tagsPanel } = useTagsRow(task, tags);
 
   const finish = (title?: string) => {
     setEditing(false);
@@ -451,6 +415,8 @@ export function TaskRow({
           inactive={inactive}
           editRef={editRef}
           notesButton={notesButton}
+          tagsButton={tagsButton}
+          onSelectTag={tags?.onSelect}
           onEdit={() => setEditing(true)}
           onDelete={() => void onDelete(task.id)}
         />
@@ -463,6 +429,7 @@ export function TaskRow({
         onChangePriority={(priority) => void onChangePriority(task.id, priority)}
       />
       {panel}
+      {tagsPanel}
     </li>
   );
 }

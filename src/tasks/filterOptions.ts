@@ -1,4 +1,11 @@
-import type { DueFilter, PriorityFilter, SortOrder, StatusFilter } from '../api/types';
+import type {
+  DueFilter,
+  PriorityFilter,
+  SortOrder,
+  StatusFilter,
+  Tag,
+  TagFilter,
+} from '../api/types';
 import type { SelectOption } from '../components/SelectField';
 import { copy } from '../copy';
 
@@ -29,3 +36,12 @@ export const SORT_OPTIONS: Array<SelectOption<SortOrder>> = [
   { value: 'due', label: copy.sortDue },
   { value: 'priority', label: copy.sortPriority },
 ];
+
+/** The Tag select: Any, No tags, then one option per tag by name (the tags arrive sorted by name). */
+export function tagFilterOptions(tags: Tag[]): Array<SelectOption<TagFilter>> {
+  return [
+    { value: 'any', label: copy.tagFilterAny },
+    { value: 'none', label: copy.tagFilterNone },
+    ...tags.map((tag) => ({ value: tag.id, label: tag.name })),
+  ];
+}

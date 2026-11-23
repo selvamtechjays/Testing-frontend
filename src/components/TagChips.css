@@ -1,0 +1,67 @@
+/* Tag chips: the six colour pairs are tokens in index.css; the name is always the text. */
+.tag-chips {
+  display: contents;
+}
+
+.tag-chip {
+  flex-shrink: 1;
+  min-width: 0;
+  max-width: 100%;
+  padding: 0 var(--space-2);
+  overflow: hidden;
+  border: 1px solid var(--tag-gray-fg);
+  border-radius: var(--radius-full);
+  background: var(--tag-gray-bg);
+  color: var(--tag-gray-fg);
+  font-size: var(--font-size-sm);
+  line-height: var(--line-height-sm);
+  font-weight: var(--font-weight-medium);
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.tag-chip--red {
+  border-color: var(--tag-red-fg);
+  background: var(--tag-red-bg);
+  color: var(--tag-red-fg);
+}
+
+.tag-chip--orange {
+  border-color: var(--tag-orange-fg);
+  background: var(--tag-orange-bg);
+  color: var(--tag-orange-fg);
+}
+
+.tag-chip--green {
+  border-color: var(--tag-green-fg);
+  background: var(--tag-green-bg);
+  color: var(--tag-green-fg);
+}
+
+.tag-chip--blue {
+  border-color: var(--tag-blue-fg);
+  background: var(--tag-blue-bg);
+  color: var(--tag-blue-fg);
+}
+
+.tag-chip--purple {
+  border-color: var(--tag-purple-fg);
+  background: var(--tag-purple-bg);
+  color: var(--tag-purple-fg);
+}
+
+/* A selectable chip is a real button: the 44px target, a hover lift and the global focus ring. */
+.tag-chip--button {
+  min-height: var(--control-height);
+  font-family: inherit;
+  cursor: pointer;
+  transition: box-shadow var(--duration-fast) var(--ease-standard);
+}
+
+.tag-chip--button:hover {
+  box-shadow: var(--shadow-raised);
+}
+
+.tag-chip--button:active {
+  box-shadow: none;
+}

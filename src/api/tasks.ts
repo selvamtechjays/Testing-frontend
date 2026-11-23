@@ -17,6 +17,8 @@ export interface TaskPatch {
   priority?: TaskPriority;
   /** Plain text of at most 1000 characters, or null to clear it (Task-24). */
   notes?: string | null;
+  /** The task's whole tag list by id; [] clears it (task-tags). */
+  tagIds?: string[];
 }
 
 /** What a new task is made from; a missing date and priority mean no date and Medium. */
@@ -24,6 +26,7 @@ export interface NewTask {
   title: string;
   dueDate?: string | null;
   priority?: TaskPriority;
+  tagIds?: string[];
 }
 
 export interface ListTasksOptions {
@@ -43,13 +46,13 @@ export interface TaskListResult {
 }
 
 /** A task as the server sent it: an older API, or a row written before Task-23 or Task-24, may lack these fields. */
-type WireTask = Omit<Task, 'dueDate' | 'priority' | 'notes'> &
-  Partial<Pick<Task, 'dueDate' | 'priority' | 'notes'>>;
+type WireTask = Omit<Task, 'dueDate' | 'priority' | 'notes' | 'tags'> &
+  Partial<Pick<Task, 'dueDate' | 'priority' | 'notes' | 'tags'>>;
 
 /**
  * Every task enters the app through here, so a missing due date reads as none and a missing
- * priority as Medium (the same rule the server applies to older rows, DEC-210), and a missing note as
- * no notes (DEC-240). A field the server left out must never crash the list.
+ * priority as Medium (the same rule the server applies to older rows, DEC-210), a missing note as
+ * no notes (DEC-240), and missing tags as none. A field the server left out must never crash the list.
  */
 export function toTask(wire: WireTask): Task {
   return {
@@ -57,6 +60,7 @@ export function toTask(wire: WireTask): Task {
     dueDate: wire.dueDate ?? null,
     priority: wire.priority ?? 'medium',
     notes: wire.notes ?? null,
+    tags: wire.tags ?? [],
   };
 }
 
@@ -90,7 +94,7 @@ export async function createTask(input: NewTask, signal?: AbortSignal): Promise<
   return { task: toTask(task) };
 }
 
-/** PATCH /api/tasks/:id (EP-TASK-03). Used for tick, untick and edits of the title, due date, priority and notes. */
+/** PATCH /api/tasks/:id (EP-TASK-03). Used for tick, untick and edits of the title, due date, priority, notes and tags (sent as tagIds). */
 export async function updateTask(
   id: string,
   patch: TaskPatch,

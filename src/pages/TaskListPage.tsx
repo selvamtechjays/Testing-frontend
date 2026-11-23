@@ -1,5 +1,7 @@
+import { useRef, useState, type RefObject } from 'react';
 import { AddTaskForm } from '../components/AddTaskForm';
 import { FailureNotice } from '../components/FailureNotice';
+import { ManageTagsPanel } from '../components/ManageTagsPanel';
 import { OverdueSummary } from '../components/OverdueSummary';
 import { StatusMessage } from '../components/StatusMessage';
 import { TaskFilterBar } from '../components/TaskFilterBar';
@@ -21,7 +23,29 @@ import { TasksProvider } from '../tasks/TasksProvider';
 import type { ListStatus } from '../tasks/tasksContext';
 import { useTasks } from '../tasks/useTasks';
 
-function Body() {
+/** The Manage tags panel, mounted only while it is open so it reads the tags afresh each time. */
+function ManageTags({ open, onClose }: { open: boolean; onClose: () => void }) {
+  const { tags, updateTag, deleteTag, freshTaskCount, refreshTags } = useTasks();
+  if (!open) return null;
+  return (
+    <ManageTagsPanel
+      tags={tags}
+      onUpdate={updateTag}
+      onDelete={deleteTag}
+      onFreshCount={freshTaskCount}
+      onRefresh={refreshTags}
+      onClose={onClose}
+    />
+  );
+}
+
+interface BodyProps {
+  /** The Manage tags panel is open; a row panel opening closes it. */
+  managing: boolean;
+  onRowPanelOpened: () => void;
+}
+
+function Body({ managing, onRowPanelOpened }: BodyProps) {
   const {
     tasks,
     status,
@@ -32,6 +56,12 @@ function Body() {
     changeDueDate,
     changePriority,
     changeNotes,
+    tags,
+    tagsStatus,
+    refreshTags,
+    changeTags,
+    createTagAndTick,
+    selectTag,
     startDelete,
     retrySearch,
     clearFilters,
@@ -53,6 +83,14 @@ function Body() {
       onChangePriority={changePriority}
       onChangeNotes={changeNotes}
       onDelete={startDelete}
+      tags={tags}
+      tagsStatus={tagsStatus}
+      onChangeTags={changeTags}
+      onCreateTag={createTagAndTick}
+      onRetryTags={() => void refreshTags()}
+      onSelectTag={selectTag}
+      manageOpen={managing}
+      onRowPanelOpened={onRowPanelOpened}
     />
   );
 }
@@ -73,30 +111,16 @@ function announcement(
   return '';
 }
 
-function Content() {
-  const {
-    tasks,
-    status,
-    addTask,
-    deletePending,
-    undoDelete,
-    search,
-    setSearch,
-    searching,
-    searchApplied,
-    filters,
-    setFilter,
-    clearFilters,
-    filtersApplied,
-    today,
-    overdueCount,
-  } = useTasks();
-  const { message, dismiss } = useFailureNotice();
-  // Only a list that loaded can take an add: while loading it would race the load, and after a
-  // failed load or failed search an added task would never appear.
-  const canAdd = status === 'empty' || status === 'populated' || status === 'noMatch';
-  // Search and filters need a list to narrow: not during the first load, nor after it failed.
-  const canSearch = status !== 'loading' && status !== 'loadFailed';
+interface FilterToolsProps {
+  managing: boolean;
+  onToggleManage: () => void;
+  onCloseManage: () => void;
+  manageRef: RefObject<HTMLButtonElement | null>;
+}
+
+/** Search, the filter bar (with its Manage tags button), the panel it opens, and the overdue summary. */
+function FilterTools({ managing, onToggleManage, onCloseManage, manageRef }: FilterToolsProps) {
+  const { search, setSearch, filters, setFilter, clearFilters, tags, overdueCount } = useTasks();
   // Overdue tasks are always pending, so the summary also clears a Completed status (DEC-234).
   const showOverdue = () => {
     setFilter('status', 'all');
@@ -104,21 +128,51 @@ function Content() {
   };
   return (
     <>
+      <TaskSearch value={search} onChange={setSearch} />
+      <TaskFilterBar
+        filters={filters}
+        onChange={setFilter}
+        onClear={clearFilters}
+        active={filtersActive(filters)}
+        tags={tags}
+        manage={{ open: managing, onToggle: onToggleManage, ref: manageRef }}
+      />
+      <ManageTags open={managing} onClose={onCloseManage} />
+      <OverdueSummary count={overdueCount} onSelect={showOverdue} />
+    </>
+  );
+}
+
+function Content() {
+  const { tasks, status, addTask, deletePending, undoDelete } = useTasks();
+  const { searching, searchApplied, filtersApplied, today } = useTasks();
+  const { message, dismiss } = useFailureNotice();
+  const [managing, setManaging] = useState(false);
+  const manageRef = useRef<HTMLButtonElement>(null);
+  const closeManage = () => {
+    setManaging(false);
+    manageRef.current?.focus();
+  };
+  // Only a list that loaded can take an add: while loading it would race the load, and after a
+  // failed load or failed search an added task would never appear.
+  const canAdd = status === 'empty' || status === 'populated' || status === 'noMatch';
+  // Search and filters need a list to narrow: not during the first load, nor after it failed.
+  const canSearch = status !== 'loading' && status !== 'loadFailed';
+  return (
+    <>
       <div className="page-header">
         <h1>{copy.homeHeading}</h1>
         <p className="page-intro">{copy.homeIntro}</p>
       </div>
       {canAdd ? <AddTaskForm onAdd={(task) => void addTask(task)} today={today} /> : null}
-      {canSearch ? <TaskSearch value={search} onChange={setSearch} /> : null}
       {canSearch ? (
-        <TaskFilterBar
-          filters={filters}
-          onChange={setFilter}
-          onClear={clearFilters}
-          active={filtersActive(filters)}
+        <FilterTools
+          managing={managing}
+          onToggleManage={() => setManaging((was) => !was)}
+          onCloseManage={closeManage}
+          manageRef={manageRef}
         />
       ) : null}
-      {canSearch ? <OverdueSummary count={overdueCount} onSelect={showOverdue} /> : null}
       <SearchLiveRegion
         message={announcement(
           status,
@@ -130,7 +184,7 @@ function Content() {
       <FailureNotice message={message} onDismiss={dismiss} />
       <UndoMessage visible={deletePending} onUndo={undoDelete} />
       <div aria-busy={searching}>
-        <Body />
+        <Body managing={managing} onRowPanelOpened={() => setManaging(false)} />
       </div>
     </>
   );

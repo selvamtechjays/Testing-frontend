@@ -87,10 +87,15 @@
   font-weight: var(--font-weight-semibold);
 }
 
-/* Status, priority and due words sit together under the title and wrap on narrow screens. */
+/*
+ * Status, priority and due words sit together under the title and wrap on narrow screens. The
+ * row is no wider than the body, so a long tag chip shortens with an ellipsis instead of pushing
+ * the page sideways (the body aligns its children to the start, which would size this to content).
+ */
 .task-row-meta {
   display: flex;
   flex-wrap: wrap;
+  max-width: 100%;
   gap: var(--space-1) var(--space-2);
 }
 

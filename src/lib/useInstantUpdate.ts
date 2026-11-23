@@ -45,6 +45,20 @@ async function saveWithTimeout(
 }
 
 /**
+ * Runs a request that is not an instant update (a tag create, rename, delete or read) under the
+ * same timeout: no answer after SAVE_TIMEOUT_MS aborts it and rejects like a timed-out save.
+ */
+export async function withSaveTimeout<T>(request: (signal: AbortSignal) => Promise<T>): Promise<T> {
+  const controller = new AbortController();
+  const timer = setTimeout(() => controller.abort(), SAVE_TIMEOUT_MS);
+  try {
+    return await Promise.race([request(controller.signal), rejectOnAbort(controller.signal)]);
+  } finally {
+    clearTimeout(timer);
+  }
+}
+
+/**
  * The one mechanism for add, tick, untick, edit and delete: show the change, save in the
  * background, undo it and say so if the save fails. Exposes no loading or pending state (BR-1).
  */

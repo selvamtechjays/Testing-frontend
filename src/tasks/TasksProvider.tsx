@@ -8,7 +8,7 @@ import {
   type RefObject,
 } from 'react';
 import { createTask, listTasks, updateTask, type NewTask, type TaskPatch } from '../api/tasks';
-import type { ListFilters, Task } from '../api/types';
+import type { ListFilters, Task, TaskTag } from '../api/types';
 import { localToday } from '../lib/localDate';
 import { useInstantUpdate } from '../lib/useInstantUpdate';
 import { DEFAULT_FILTERS, filtersNarrowing, loadFilters, saveFilters } from './listFilters';
@@ -22,12 +22,17 @@ import {
   patchField,
   removeById,
   replaceId,
+  sortByName,
 } from './taskState';
+import { useTagActions } from './useTagActions';
+import { useTagManagement } from './useTagManagement';
+import { useTagFilter, type TagFilterState } from './useTagFilter';
+import { useTagList } from './useTagList';
 import { usePendingDelete } from './usePendingDelete';
 import { TasksContext, type ListStatus, type TasksValue } from './tasksContext';
 
 type LoadState = 'loading' | 'ready' | 'failed' | 'searchFailed';
-type EditableField = 'title' | 'status' | 'dueDate' | 'priority' | 'notes';
+type EditableField = 'title' | 'status' | 'dueDate' | 'priority' | 'notes' | 'tags';
 type Stored = Pick<Task, EditableField>;
 
 /** How long the box must sit still before its text becomes the query that is sent. */
@@ -58,7 +63,7 @@ function useSearchQuery() {
 }
 
 /**
- * The status, priority, due and sort choices. They apply at once (no debounce: a select is one
+ * The status, priority, due, sort and tag choices. They apply at once (no debounce: a select is one
  * decision, not a stream of keystrokes) and are remembered for this user on this device (DEC-217).
  */
 function useListFilters(userId: string | undefined) {
@@ -78,8 +83,10 @@ function useListFilters(userId: string | undefined) {
     [update],
   );
   const clearFilters = useCallback(() => update(DEFAULT_FILTERS), [update]);
-  return { filters, setFilter, clearFilters };
+  return { filters, setFilter, clearFilters, latest };
 }
+
+type ListFiltersState = ReturnType<typeof useListFilters>;
 
 /** The server-confirmed copy of a task's editable fields, which a failed change restores. */
 const toStored = (task: Task): Stored => ({
@@ -88,7 +95,29 @@ const toStored = (task: Task): Stored => ({
   dueDate: task.dueDate,
   priority: task.priority,
   notes: task.notes,
+  tags: task.tags,
 });
+
+/** The request body for one changed field: the tag list goes as ids, everything else as itself. */
+function toPatch<K extends EditableField>(field: K, value: Task[K]): TaskPatch {
+  if (field === 'tags') return { tagIds: (value as TaskTag[]).map((tag) => tag.id) };
+  return { [field]: value } as TaskPatch;
+}
+
+/** Sends one patch; a refusal is shown to `onRefused` first so the caller can react to its kind. */
+async function sendPatch(
+  id: string,
+  patch: TaskPatch,
+  signal: AbortSignal,
+  onRefused?: (error: unknown) => void,
+) {
+  try {
+    await updateTask(id, patch, signal);
+  } catch (error) {
+    onRefused?.(error);
+    throw error;
+  }
+}
 
 /** The user's calendar date as of the last request (DEC-218), readable synchronously by actions. */
 function useToday(onNewDay: () => void) {
@@ -182,12 +211,39 @@ interface LoaderInput {
   busy: RefObject<Map<string, number>>;
   readEpoch: () => number;
   acceptServerCount: (sentAt: number, count: number) => void;
+  /** The Tag filter's say over the request: hold it back, and react to a refusal naming `tag`. */
+  tagGate: Pick<TagFilterState, 'hold' | 'onRefused'>;
+}
+
+/**
+ * Takes a list response into the in-memory list. What the user changed while the request was in
+ * flight wins; a task whose delete is held, saving, or finished since it went out is gone, whatever
+ * the server still lists, because the response may predate the delete reaching it.
+ */
+function takeResponse(
+  input: Pick<LoaderInput, 'listRef' | 'commit' | 'remember' | 'deleting' | 'gone' | 'busy'>,
+  tasks: Task[],
+  sent: Task[],
+  sentAt: number,
+) {
+  const { listRef, commit, remember, deleting, gone, busy } = input;
+  const now = listRef.current;
+  tasks
+    .filter((task) => !editedSince(sent, now, task.id) && !busy.current.has(task.id))
+    .forEach(remember);
+  commit((list) =>
+    mergeSearchResult(tasks, sent, list, (id) => busy.current.has(id)).filter(
+      (task) => !deleting.current.has(task.id) && !deletedSince(gone.current, task.id, sentAt),
+    ),
+  );
+  pruneGone(gone.current, sentAt);
 }
 
 /** What the last finished request was for, and how it ended. */
 function useListLoader(input: LoaderInput) {
   const { query, filters, attempt, listRef, commit, remember, refreshToday } = input;
   const { deleting, gone, busy, readEpoch, acceptServerCount } = input;
+  const { hold, onRefused } = input.tagGate;
   const [load, setLoad] = useState<LoadState>('loading');
   const [appliedQuery, setAppliedQuery] = useState('');
   const [appliedFilters, setAppliedFilters] = useState<ListFilters>(filters);
@@ -199,6 +255,8 @@ function useListLoader(input: LoaderInput) {
   // Runs on mount and whenever the search text or a filter changes (or Retry is pressed). Each run
   // aborts the one before it, and a response from an aborted run is dropped; an abort is not a failure.
   useEffect(() => {
+    // A remembered tag id waits until the tag list says whether it still exists.
+    if (hold) return;
     const controller = new AbortController();
     const sent = listRef.current;
     const sentAt = readEpoch();
@@ -206,20 +264,12 @@ function useListLoader(input: LoaderInput) {
     listTasks({ search: query, filters, today: refreshToday(), signal: controller.signal })
       .then((result) => {
         if (controller.signal.aborted) return;
-        // What the user changed while this was in flight wins; the response's copy of it is stale.
-        const now = listRef.current;
-        result.tasks
-          .filter((task) => !editedSince(sent, now, task.id) && !busy.current.has(task.id))
-          .forEach(remember);
-        // A task whose delete is held, saving, or finished since this request went out is gone,
-        // whatever the server still lists: the response may predate the delete reaching it.
-        commit((list) =>
-          mergeSearchResult(result.tasks, sent, list).filter(
-            (task) =>
-              !deleting.current.has(task.id) && !deletedSince(gone.current, task.id, sentAt),
-          ),
+        takeResponse(
+          { listRef, commit, remember, deleting, gone, busy },
+          result.tasks,
+          sent,
+          sentAt,
         );
-        pruneGone(gone.current, sentAt);
         hasLoaded.current = true;
         setAppliedQuery(query);
         setAppliedFilters(filters);
@@ -227,8 +277,9 @@ function useListLoader(input: LoaderInput) {
         setLoad('ready');
         setSettled(requestKey);
       })
-      .catch(() => {
+      .catch((error: unknown) => {
         if (controller.signal.aborted) return;
+        onRefused(error);
         // The first load keeps its own message; any later request failing is a failed search.
         setLoad(hasLoaded.current ? 'searchFailed' : 'failed');
         setSettled(requestKey);
@@ -248,6 +299,8 @@ function useListLoader(input: LoaderInput) {
     busy,
     readEpoch,
     acceptServerCount,
+    hold,
+    onRefused,
   ]);
 
   // Not busy before the first answer (that is the skeleton's job) or after a failed first load.
@@ -256,10 +309,9 @@ function useListLoader(input: LoaderInput) {
 }
 
 /** The in-memory list, its load state, and what the server last confirmed per task. */
-function useTaskStore(userId: string | undefined) {
+function useTaskStore(listFilters: ListFiltersState, tagGate: LoaderInput['tagGate']) {
   const [tasks, setTasks] = useState<Task[]>([]);
   const { search, setSearch, query } = useSearchQuery();
-  const { filters, setFilter, clearFilters } = useListFilters(userId);
   const [attempt, setAttempt] = useState(0);
   const retrySearch = useCallback(() => setAttempt((count) => count + 1), []);
   const { today, todayRef, refreshToday } = useToday(retrySearch);
@@ -286,7 +338,7 @@ function useTaskStore(userId: string | undefined) {
 
   const { load, appliedQuery, appliedFilters, searching } = useListLoader({
     query,
-    filters,
+    filters: listFilters.filters,
     attempt,
     listRef,
     commit,
@@ -297,6 +349,7 @@ function useTaskStore(userId: string | undefined) {
     busy,
     readEpoch,
     acceptServerCount,
+    tagGate,
   });
 
   return {
@@ -307,9 +360,7 @@ function useTaskStore(userId: string | undefined) {
     retrySearch,
     searching,
     appliedQuery,
-    filters,
-    setFilter,
-    clearFilters,
+    ...listFilters,
     filtersApplied: filtersNarrowing(appliedFilters),
     today,
     todayRef,
@@ -341,6 +392,7 @@ function useAddTask({ commit, remember, todayRef, adjustOverdue, beginChange }: 
         dueDate: input.dueDate ?? null,
         priority: input.priority ?? 'medium',
         notes: null,
+        tags: [],
       };
       const settled = beginChange();
       return run({
@@ -358,45 +410,139 @@ function useAddTask({ commit, remember, todayRef, adjustOverdue, beginChange }: 
   );
 }
 
-/** Tick and edits, each shown at once, saved in the background, undone if the save fails. */
-function useFieldChanges(store: TaskStore) {
+/** What a saved change confirms: for tags, the ids sent with the names the row shows now. */
+function settledValue<K extends EditableField>(
+  field: K,
+  value: Task[K],
+  list: Task[],
+  id: string,
+): Task[K] {
+  if (field !== 'tags') return value;
+  const shown = list.find((task) => task.id === id)?.tags ?? [];
+  return sortByName(
+    (value as TaskTag[]).map((tag) => shown.find((own) => own.id === tag.id) ?? tag),
+  ) as Task[K];
+}
+
+/**
+ * One save at a time per task: `ready` resolves when every earlier save for that task has
+ * settled, and `done` lets the next one go.
+ */
+function useSaveQueue() {
+  const queue = useRef(new Map<string, Promise<void>>());
+  return useCallback((id: string) => {
+    const ready = queue.current.get(id) ?? Promise.resolve();
+    let release = () => {};
+    const finished = new Promise<void>((resolve) => {
+      release = resolve;
+    });
+    const tail = ready.then(() => finished);
+    queue.current.set(id, tail);
+    return {
+      ready,
+      /** True while no later save for this task has been queued behind this one. */
+      isLatest: () => queue.current.get(id) === tail,
+      done: () => {
+        release();
+        if (queue.current.get(id) === tail) queue.current.delete(id);
+      },
+    };
+  }, []);
+}
+
+/**
+ * A failed save puts one field back to what the server last confirmed (or what it was before),
+ * unless a later change to the same field has replaced this one: that change settles it.
+ * `latest` says so for tags (the save queue knows); a rename or a dropped tag may reshape the
+ * row's tags meanwhile, so their value says nothing about whether a later tick exists.
+ */
+function restoreField<K extends EditableField>(
+  list: Task[],
+  change: {
+    id: string;
+    field: K;
+    value: Task[K];
+    stored: Stored | undefined;
+    prior: Task[K];
+    latest?: boolean;
+  },
+): Task[] {
+  const { id, field, value, stored, prior, latest } = change;
+  const shown = list.find((task) => task.id === id);
+  if (!shown) return list;
+  const replaced = latest === undefined ? shown[field] !== value : !latest;
+  if (replaced) return list;
+  return patchField(list, id, field, (stored ? stored[field] : prior) as Task[K]);
+}
+
+/**
+ * The one optimistic field change every edit goes through. Shows one field's new value at once and
+ * saves only that field; see `changeField` below.
+ */
+function useChangeField(store: TaskStore) {
   const { listRef, confirmed, commit, todayRef, adjustOverdue, beginChange } = store;
   const { run } = useInstantUpdate();
+  const takeTurn = useSaveQueue();
 
   /**
    * Shows one field's new value at once and saves only that field. On failure only that field
    * goes back, to what the server last confirmed - and only if no later change to the same
    * field has replaced this one, because that later change will settle the field itself.
    */
-  const changeField = useCallback(
-    <K extends EditableField>(id: string, field: K, value: Task[K]): Promise<boolean> => {
+  return useCallback(
+    <K extends EditableField>(
+      id: string,
+      field: K,
+      value: Task[K],
+      onRefused?: (error: unknown) => void,
+    ): Promise<boolean> => {
       const current = listRef.current.find((task) => task.id === id);
       if (!current || isTempId(id)) return Promise.resolve(false);
       if (current[field] === value) return Promise.resolve(true);
       const prior = current[field];
-      const patch = { [field]: value } as TaskPatch;
+      const patch = toPatch(field, value);
       const settled = beginChange(id);
+      // A tag change sends the whole list, so two on one task must reach the server in order.
+      const turn = field === 'tags' ? takeTurn(id) : undefined;
       return run({
         apply: () => commit((list) => patchField(list, id, field, value)),
-        save: async (signal) => {
-          await updateTask(id, patch, signal);
+        clockStartsOnSend: turn !== undefined,
+        save: async (signal, startClock) => {
+          if (turn) {
+            await turn.ready;
+            startClock();
+          }
+          await sendPatch(id, patch, signal, onRefused);
           const stored = confirmed.current.get(id);
           if (!stored) return;
-          const after = { ...stored, [field]: value };
+          const after = { ...stored, [field]: settledValue(field, value, listRef.current, id) };
           confirmed.current.set(id, after);
           adjustOverdue(overdueDelta(stored, after, todayRef.current));
         },
         rollback: () =>
-          commit((list) => {
-            if (list.find((task) => task.id === id)?.[field] !== value) return list;
-            const stored = confirmed.current.get(id);
-            const back = (stored ? stored[field] : prior) as Task[K];
-            return patchField(list, id, field, back);
-          }),
-      }).finally(settled);
+          commit((list) =>
+            restoreField(list, {
+              id,
+              field,
+              value,
+              stored: confirmed.current.get(id),
+              prior,
+              latest: turn?.isLatest(),
+            }),
+          ),
+      }).finally(() => {
+        turn?.done();
+        settled();
+      });
     },
-    [run, commit, listRef, confirmed, adjustOverdue, todayRef, beginChange],
+    [run, commit, listRef, confirmed, adjustOverdue, todayRef, beginChange, takeTurn],
   );
+}
+
+/** Tick and edits, each shown at once, saved in the background, undone if the save fails. */
+function useFieldChanges(store: TaskStore) {
+  const { listRef } = store;
+  const changeField = useChangeField(store);
 
   const toggleStatus = useCallback(
     (id: string) => {
@@ -427,7 +573,7 @@ function useFieldChanges(store: TaskStore) {
     [changeField],
   );
 
-  return { toggleStatus, editTitle, changeDueDate, changePriority, changeNotes };
+  return { changeField, toggleStatus, editTitle, changeDueDate, changePriority, changeNotes };
 }
 
 /**
@@ -478,7 +624,51 @@ function useCountedDelete(store: TaskStore) {
 }
 
 type Actions = ReturnType<typeof useFieldChanges> &
-  ReturnType<typeof useCountedDelete> & { addTask: ReturnType<typeof useAddTask> };
+  ReturnType<typeof useCountedDelete> &
+  ReturnType<typeof useTagActions> & { addTask: ReturnType<typeof useAddTask> } & {
+    tagList: ReturnType<typeof useTagList>;
+    tagFilter: TagFilterState;
+    tagManagement: ReturnType<typeof useTagManagement>;
+  };
+
+/** The tag part of the context value, rebuilt only when the tag list or a tag action changes. */
+function useTagsValue({
+  tagList,
+  tagFilter,
+  tagManagement,
+  changeTags,
+  createTagAndTick,
+}: Actions) {
+  const { tags, tagsStatus, refreshTags } = tagList;
+  const { selectTag, tagDeleted } = tagFilter;
+  const { updateTag, deleteTag, freshTaskCount } = tagManagement;
+  return useMemo(
+    () => ({
+      tags,
+      tagsStatus,
+      refreshTags,
+      changeTags,
+      createTagAndTick,
+      selectTag,
+      tagDeleted,
+      updateTag,
+      deleteTag,
+      freshTaskCount,
+    }),
+    [
+      tags,
+      tagsStatus,
+      refreshTags,
+      changeTags,
+      createTagAndTick,
+      selectTag,
+      tagDeleted,
+      updateTag,
+      deleteTag,
+      freshTaskCount,
+    ],
+  );
+}
 
 /** The context value: the store's state and every action, rebuilt only when one of them changes. */
 function useTasksValue(store: TaskStore, actions: Actions): TasksValue {
@@ -486,6 +676,7 @@ function useTasksValue(store: TaskStore, actions: Actions): TasksValue {
   const { filters, setFilter, clearFilters, filtersApplied, today, overdueCount } = store;
   const { addTask, toggleStatus, editTitle, changeDueDate, changePriority, changeNotes } = actions;
   const { startDelete, undoDelete, deletePending } = actions;
+  const tagsValue = useTagsValue(actions);
   return useMemo<TasksValue>(
     () => ({
       tasks,
@@ -507,6 +698,7 @@ function useTasksValue(store: TaskStore, actions: Actions): TasksValue {
       changeDueDate,
       changePriority,
       changeNotes,
+      ...tagsValue,
       startDelete,
       undoDelete,
       deletePending,
@@ -531,6 +723,7 @@ function useTasksValue(store: TaskStore, actions: Actions): TasksValue {
       changeDueDate,
       changePriority,
       changeNotes,
+      tagsValue,
       startDelete,
       undoDelete,
       deletePending,
@@ -552,10 +745,34 @@ export function TasksProvider({
   /** Keys the remembered filters; without it they are not remembered. */
   userId?: string;
 }) {
-  const store = useTaskStore(userId);
+  const tagList = useTagList();
+  const listFilters = useListFilters(userId);
+  const tagFilter = useTagFilter({ ...listFilters, tagList });
+  const store = useTaskStore(listFilters, tagFilter);
   const addTask = useAddTask(store);
   const changes = useFieldChanges(store);
   const deletion = useCountedDelete(store);
-  const value = useTasksValue(store, { addTask, ...changes, ...deletion });
+  const tagActions = useTagActions({
+    listRef: store.listRef,
+    commit: store.commit,
+    confirmed: store.confirmed,
+    changeField: changes.changeField,
+    tagList,
+  });
+  const tagManagement = useTagManagement({
+    commit: store.commit,
+    confirmed: store.confirmed,
+    tagList,
+    tagDeleted: tagFilter.tagDeleted,
+  });
+  const value = useTasksValue(store, {
+    addTask,
+    ...changes,
+    ...deletion,
+    ...tagActions,
+    tagList,
+    tagFilter,
+    tagManagement,
+  });
   return <TasksContext.Provider value={value}>{children}</TasksContext.Provider>;
 }

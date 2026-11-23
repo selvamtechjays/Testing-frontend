@@ -15,7 +15,7 @@ describe('tasks from a server that leaves out the due date, priority and notes',
     status: 'pending',
     createdAt: '2026-11-07T12:00:00.000Z',
   };
-  const normalised = { ...bare, dueDate: null, priority: 'medium', notes: null };
+  const normalised = { ...bare, dueDate: null, priority: 'medium', notes: null, tags: [] };
 
   it('reads them as no due date, Medium and no notes from the list (DEC-210, DEC-240)', async () => {
     server.use(http.get('/api/tasks', () => HttpResponse.json({ tasks: [bare] })));
@@ -29,6 +29,47 @@ describe('tasks from a server that leaves out the due date, priority and notes',
     );
     await expect(createTask({ title: 'Pay rent' })).resolves.toEqual({ task: normalised });
     await expect(updateTask('old-1', { status: 'pending' })).resolves.toEqual({ task: normalised });
+  });
+});
+
+describe('tags on tasks (FEAT-TAG-03 AC-4 AC-6)', () => {
+  const tags = [
+    { id: 't1', name: 'Home', colour: 'green' as const },
+    { id: 't2', name: 'Work', colour: 'blue' as const },
+  ];
+
+  it('returns the tags the server sent on list, create and update (TAG03 AC-4)', async () => {
+    const stored = buildTask({ id: 'x1', tags });
+    server.use(
+      http.get('/api/tasks', () => HttpResponse.json({ tasks: [stored] })),
+      http.post('/api/tasks', () => HttpResponse.json({ task: stored }, { status: 201 })),
+      http.patch('/api/tasks/:id', () => HttpResponse.json({ task: stored })),
+    );
+    expect((await listTasks()).tasks[0].tags).toEqual(tags);
+    expect((await createTask({ title: 'x' })).task.tags).toEqual(tags);
+    expect((await updateTask('x1', { tagIds: [] })).task.tags).toEqual(tags);
+  });
+
+  it('sends tagIds as the whole list, and an empty list to clear (TAG03 AC-6)', async () => {
+    const bodies: unknown[] = [];
+    server.use(
+      http.patch('/api/tasks/:id', async ({ request }) => {
+        bodies.push(await request.json());
+        return HttpResponse.json({ task: buildTask({ id: 'x1' }) });
+      }),
+      http.post('/api/tasks', async ({ request }) => {
+        bodies.push(await request.json());
+        return HttpResponse.json({ task: buildTask({ id: 'x2' }) }, { status: 201 });
+      }),
+    );
+    await updateTask('x1', { tagIds: ['t1', 't2'] });
+    await updateTask('x1', { tagIds: [] });
+    await createTask({ title: 'x', tagIds: ['t1'] });
+    expect(bodies).toEqual([
+      { tagIds: ['t1', 't2'] },
+      { tagIds: [] },
+      { title: 'x', tagIds: ['t1'] },
+    ]);
   });
 });
 
@@ -214,7 +255,7 @@ describe('task API calls', () => {
     it('sends only the filters that are not the default (AC-11)', async () => {
       const { params } = await paramsOf({
         today: '2026-11-16',
-        filters: { status: 'pending', priority: 'all', due: 'week', sort: 'newest' },
+        filters: { status: 'pending', priority: 'all', due: 'week', sort: 'newest', tag: 'any' },
       });
       expect(Object.fromEntries(params)).toEqual({
         status: 'pending',
@@ -223,11 +264,27 @@ describe('task API calls', () => {
       });
     });
 
+    it('sends tag for No tags or a tag id, and leaves it out for Any (TAG04 AC-1 AC-2 AC-4)', async () => {
+      const base = { status: 'all', priority: 'all', due: 'any', sort: 'newest' } as const;
+      const none = await paramsOf({ today: '2026-11-16', filters: { ...base, tag: 'none' } });
+      expect(none.params.get('tag')).toBe('none');
+      const one = await paramsOf({ today: '2026-11-16', filters: { ...base, tag: 'abc123' } });
+      expect(one.params.get('tag')).toBe('abc123');
+      const any = await paramsOf({ today: '2026-11-16', filters: { ...base, tag: 'any' } });
+      expect(any.params.has('tag')).toBe(false);
+    });
+
     it('sends every non-default choice together with search (AC-5 AC-6 AC-7)', async () => {
       const { params } = await paramsOf({
         search: ' milk ',
         today: '2026-11-16',
-        filters: { status: 'completed', priority: 'high', due: 'overdue', sort: 'priority' },
+        filters: {
+          status: 'completed',
+          priority: 'high',
+          due: 'overdue',
+          sort: 'priority',
+          tag: 'any',
+        },
       });
       expect(Object.fromEntries(params)).toEqual({
         search: 'milk',

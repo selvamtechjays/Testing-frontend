@@ -1,4 +1,6 @@
 import { http, HttpResponse } from 'msw';
+import { onTestFinished } from 'vitest';
+import { server } from './server';
 import type { Task } from '../../api/types';
 
 /** Backend refusal bodies exactly as the API sends them (plan section 3). */
@@ -35,6 +37,12 @@ const addDays = (date: string, days: number): string => {
 
 const PRIORITY_RANK = { high: 0, medium: 1, low: 2 } as const;
 
+/** The tag filter as the server defines it: none is no tags, an id is that tag on the task. */
+function matchesTag(task: Task, tag: string | null): boolean {
+  if (tag === null) return true;
+  return tag === 'none' ? task.tags.length === 0 : task.tags.some((x) => x.id === tag);
+}
+
 /** The due filter as the server defines it: overdue is pending and before today; week is today to today+6. */
 function matchesDue(task: Task, due: string | null, today: string): boolean {
   if (due === 'overdue')
@@ -63,7 +71,7 @@ function ordered(tasks: Task[], sort: string | null): Task[] {
 
 /**
  * The list body the way the server answers it: owner's tasks narrowed by search (trimmed, case-insensitive
- * literal title substring), status, priority and due, ordered by sort, with `overdueCount` (pending
+ * literal title substring), status, priority, due and tag (one tag id, or none for no tags), ordered by sort, with `overdueCount` (pending
  * tasks before today, ignoring every filter) whenever `today` is sent. The tasks are given newest
  * first; a stored row with no priority is already Medium by the builder, as the DTO reads it.
  */
@@ -75,11 +83,13 @@ export function listBodyFor(
   const today = query.get('today');
   const status = query.get('status');
   const priority = query.get('priority');
+  const tag = query.get('tag');
   const matches = tasks.filter(
     (t) =>
       (text === '' || t.title.toLowerCase().includes(text)) &&
       (status === null || t.status === status) &&
       (priority === null || t.priority === priority) &&
+      matchesTag(t, tag) &&
       (today === null || matchesDue(t, query.get('due'), today)),
   );
   const body: { tasks: Task[]; overdueCount?: number } = {
@@ -149,3 +159,20 @@ export const updateTaskStoring = (stored: Task[]) =>
     Object.assign(task, patch);
     return HttpResponse.json({ task });
   });
+
+/**
+ * Records the query of every GET /api/tasks the page sends during the current test, oldest first.
+ * Lets a test prove what the frontend asked the server for, not only what the stand-in answered.
+ */
+export function recordListQueries(): URLSearchParams[] {
+  const sent: URLSearchParams[] = [];
+  const listener = ({ request }: { request: Request }) => {
+    const url = new URL(request.url);
+    if (request.method === 'GET' && url.pathname === '/api/tasks') sent.push(url.searchParams);
+  };
+  server.events.on('request:start', listener);
+  onTestFinished(() => {
+    server.events.removeListener('request:start', listener);
+  });
+  return sent;
+}

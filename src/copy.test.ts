@@ -43,3 +43,11 @@ describe('copy', () => {
     }
   });
 });
+
+describe('tag copy (FEAT-TAG-03 AC-19 AC-20)', () => {
+  it('words the two limits exactly as the plan states (TAG03 AC-19 AC-20)', () => {
+    expect(copy.tagsTaskLimit).toBe('A task can have up to 5 tags.');
+    expect(copy.tagsUserLimit).toBe('You can have up to 50 tags.');
+    expect(copy.tagsButtonLabel('Buy milk')).toBe('Tags for Buy milk');
+  });
+});

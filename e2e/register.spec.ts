@@ -8,6 +8,10 @@ test.describe('account registration', () => {
     await page.route(/\/api\/tasks(\?.*)?$/, (route) =>
       route.fulfill({ status: 200, contentType: 'application/json', body: '{"tasks":[]}' }),
     );
+    // The home screen also reads the user's tags (task-tags); none keeps it hermetic too.
+    await page.route(/\/api\/tags(\?.*)?$/, (route) =>
+      route.fulfill({ status: 200, contentType: 'application/json', body: '{"tags":[]}' }),
+    );
     await page.route('**/api/auth/register', (route) =>
       route.fulfill({
         status: 201,
