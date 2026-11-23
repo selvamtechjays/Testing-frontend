@@ -113,14 +113,14 @@ const CALENDAR_SEED: SeedTask[] = [
 // "Today" for the date-boundary specs: 16 Nov 2026, local noon in Los Angeles (UTC-8).
 const LA = { timezoneId: 'America/Los_Angeles', now: '2026-11-16T12:00:00-08:00' };
 
+// The time-zone specs freeze "today" per zone (16 Nov 2026, local noon: LA above, Brisbane here) so the typed
+// 2026-11-20 is always a future day and the row never reads Overdue, whatever day the suite runs.
+const BRISBANE = { timezoneId: 'Australia/Brisbane', now: '2026-11-16T12:00:00+10:00' };
+
 test.describe('due dates never shift with the time zone', () => {
   test('the same date shows as 2026-11-20 in UTC-8 and UTC+10 (AC-9)', async ({ browser }) => {
-    const la = await personWith(browser, 'tzla', [{ title: 'Pay rent' }], {
-      timezoneId: 'America/Los_Angeles',
-    });
-    const bne = await personWith(browser, 'tzbne', [{ title: 'Pay rent' }], {
-      timezoneId: 'Australia/Brisbane',
-    });
+    const la = await personWith(browser, 'tzla', [{ title: 'Pay rent' }], LA);
+    const bne = await personWith(browser, 'tzbne', [{ title: 'Pay rent' }], BRISBANE);
     for (const { page } of [la, bne]) {
       await setRowDate(page, 'Pay rent', '2026-11-20');
       await expect(rowFor(page, 'Pay rent')).toContainText('Due Nov 20, 2026');
@@ -135,8 +135,8 @@ test.describe('due dates never shift with the time zone', () => {
   test('a date added through the form reads back unchanged in both zones (AC-2 AC-9)', async ({
     browser,
   }) => {
-    for (const timezoneId of ['America/Los_Angeles', 'Australia/Brisbane']) {
-      const { context, page } = await personWith(browser, 'tzadd', [], { timezoneId });
+    for (const zone of [LA, BRISBANE]) {
+      const { context, page } = await personWith(browser, 'tzadd', [], zone);
       await page.getByLabel('New task').fill('Book flights');
       await page.getByLabel('Due date', { exact: true }).fill('2026-11-20');
       await page

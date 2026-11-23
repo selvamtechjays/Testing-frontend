@@ -30,12 +30,24 @@ cp .env.example .env   # optional — defaults work for local dev
 ```
 src/
   main.tsx        entry
-  App.tsx         root shell
-  App.test.tsx    smoke test
-  test/setup.ts   jest-dom matchers
+  App.tsx         root shell and routes
+  copy.ts         all UI text
+  index.css       global styles (App.css and fonts.css sit beside it)
+  api/            REST client and typed calls (auth, tasks)
+  auth/           sign-in state and the route guard
+  components/     shared building blocks and task list pieces, with co-located CSS and tests
+  lib/            small helpers (local dates, theme, motion, instant updates)
+  pages/          route pages: sign-in, register, task list
+  tasks/          task list state, filters and pending delete
+  validation/     credential, title and notes rules
+  test/           setup.ts (jest-dom matchers), utils.tsx, builders/, mocks/, smoke/
+e2e/              Playwright specs, one per journey
+  pages/          page objects
+  fixtures/       shared test fixtures
 ```
 
-Feature code goes in `src/features/<feature>/`. Conventions are in the workspace's
+Per-unit detail (pages, what each calls) lives in `context/code-context/`; start at
+`context/code-context/code-context-index.md`. Conventions are in the workspace's
 `.jetrix/shared-context/coding-standards.md` § frontend.
 
 ## Testing
