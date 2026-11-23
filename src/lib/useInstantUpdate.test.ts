@@ -8,7 +8,7 @@ import { copy } from '../copy';
 import { FailureNoticeProvider, useFailureNotice } from './FailureNoticeContext';
 import { insertTemp, patchField, reinsertAt, removeById } from '../tasks/taskState';
 import { buildTask } from '../test/builders/task';
-import { SAVE_TIMEOUT_MS, useInstantUpdate } from './useInstantUpdate';
+import { SAVE_TIMEOUT_MS, useInstantUpdate, withSaveTimeout } from './useInstantUpdate';
 
 function wrapper({ children }: { children: ReactNode }) {
   return createElement(FailureNoticeProvider, null, children);
@@ -319,5 +319,28 @@ describe('useInstantUpdate interleaved changes', () => {
     });
     expect(holder.list[0]).toMatchObject({ title: 'Edited', status: 'pending' });
     expect(result.current.notice.message).toBe(copy.saveFailed);
+  });
+});
+
+describe('withSaveTimeout (task-tags requests: create, rename, recolour, delete, read)', () => {
+  it('aborts a request with no answer after SAVE_TIMEOUT_MS and rejects like a timed-out save', async () => {
+    vi.useFakeTimers();
+    let seen: AbortSignal | undefined;
+    const result = withSaveTimeout((signal) => {
+      seen = signal;
+      return new Promise<never>(() => {});
+    });
+    const settled = expect(result).rejects.toMatchObject({ status: 0, code: 'TIMEOUT' });
+    await vi.advanceTimersByTimeAsync(SAVE_TIMEOUT_MS - 1);
+    expect(seen?.aborted).toBe(false);
+    await vi.advanceTimersByTimeAsync(1);
+    expect(seen?.aborted).toBe(true);
+    await settled;
+  });
+
+  it('passes an answer through and stops the clock', async () => {
+    vi.useFakeTimers();
+    await expect(withSaveTimeout(() => Promise.resolve('ok'))).resolves.toBe('ok');
+    expect(vi.getTimerCount()).toBe(0);
   });
 });

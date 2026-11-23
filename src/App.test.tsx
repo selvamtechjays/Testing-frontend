@@ -20,7 +20,7 @@ describe('App', () => {
     expect(screen.getAllByRole('main')).toHaveLength(1);
   });
 
-  it('offers no language control, logo or cookie prompt, and only the theme toggle, Log out and Add as buttons (AC-8 AC-10 TS-9 TS-11, Task-21 AC-2)', async () => {
+  it('offers no language control, logo or cookie prompt, and only the theme toggle, Log out, Add and Manage tags as buttons (AC-8 AC-10 TS-9 TS-11, Task-21 AC-2, TAG02 AC-1)', async () => {
     await renderHome();
     expect(screen.queryByRole('combobox', { name: /language|locale/i })).not.toBeInTheDocument();
     expect(screen.queryByRole('img')).not.toBeInTheDocument();
@@ -30,7 +30,7 @@ describe('App', () => {
       screen
         .getAllByRole('button')
         .map((button) => button.getAttribute('aria-label') ?? button.textContent),
-    ).toEqual(['Dark mode', 'Log out', 'Add']);
+    ).toEqual(['Dark mode', 'Log out', 'Add', 'Manage tags']);
     expect(screen.queryByText(/cookie|analytics|privacy|terms/i)).not.toBeInTheDocument();
   });
 });

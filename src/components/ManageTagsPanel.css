@@ -1,0 +1,142 @@
+/* Manage tags panel: a card under the filter bar. Tokens only; light and dark come from them. */
+.manage-tags {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-3);
+  animation: manage-tags-enter var(--duration-base) var(--ease-standard) both;
+}
+
+.manage-tags-head {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-2);
+}
+
+.manage-tags-title {
+  margin: 0;
+  font-size: var(--font-size-lg);
+  line-height: var(--line-height-lg);
+  font-weight: var(--font-weight-semibold);
+}
+
+.manage-tags-empty {
+  margin: 0;
+  color: var(--color-muted);
+}
+
+/* One tag per row; the controls stack at 360px and sit in a line from the breakpoint up. */
+.manage-tags-row {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+  padding-top: var(--space-3);
+  border-top: 1px solid var(--color-divider);
+}
+
+.manage-tags-name {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: flex-start;
+  gap: var(--space-2);
+}
+
+.manage-tags-field {
+  flex: 1 1 8rem;
+  min-width: 0;
+}
+
+.manage-tags-row .field {
+  margin-bottom: 0;
+}
+
+/* A colour swatch beside the name: the name is always shown, so the swatch never stands alone. */
+.manage-tags-swatch {
+  flex-shrink: 0;
+  width: var(--check-size);
+  height: var(--check-size);
+  margin-top: calc((var(--control-height) - var(--check-size)) / 2);
+  border: 1px solid var(--tag-gray-fg);
+  border-radius: var(--radius-full);
+  background: var(--tag-gray-bg);
+}
+
+.manage-tags-swatch--red {
+  border-color: var(--tag-red-fg);
+  background: var(--tag-red-bg);
+}
+
+.manage-tags-swatch--orange {
+  border-color: var(--tag-orange-fg);
+  background: var(--tag-orange-bg);
+}
+
+.manage-tags-swatch--green {
+  border-color: var(--tag-green-fg);
+  background: var(--tag-green-bg);
+}
+
+.manage-tags-swatch--blue {
+  border-color: var(--tag-blue-fg);
+  background: var(--tag-blue-bg);
+}
+
+.manage-tags-swatch--purple {
+  border-color: var(--tag-purple-fg);
+  background: var(--tag-purple-bg);
+}
+
+.manage-tags-count {
+  margin: 0;
+  color: var(--color-muted);
+  font-size: var(--font-size-sm);
+  line-height: var(--line-height-sm);
+}
+
+.manage-tags-confirm {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+}
+
+.manage-tags-confirm-text {
+  margin: 0;
+  font-weight: var(--font-weight-semibold);
+}
+
+.manage-tags-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-2);
+}
+
+@media (min-width: 48rem) {
+  .manage-tags-row {
+    flex-direction: row;
+    flex-wrap: wrap;
+    align-items: flex-start;
+    gap: var(--space-3);
+  }
+
+  .manage-tags-name {
+    flex: 1 1 16rem;
+  }
+
+  .manage-tags-count {
+    min-width: 5rem;
+    padding-top: var(--space-3);
+  }
+}
+
+@keyframes manage-tags-enter {
+  from {
+    opacity: 0;
+    transform: translateY(-0.5rem);
+  }
+
+  to {
+    opacity: 1;
+    transform: none;
+  }
+}

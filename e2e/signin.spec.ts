@@ -15,6 +15,8 @@ async function stubSessionApi(page: Page, options: { signedIn: boolean }) {
   let signedIn = options.signedIn;
   // The task list the home screen loads once signed in; empty keeps the spec hermetic.
   await page.route(/\/api\/tasks(\?.*)?$/, (route) => route.fulfill(json(200, { tasks: [] })));
+  // Signed-in pages also read the user's tags (task-tags); none keeps this spec hermetic.
+  await page.route(/\/api\/tags(\?.*)?$/, (route) => route.fulfill(json(200, { tags: [] })));
   await page.route('**/api/auth/me', (route) =>
     route.fulfill(
       signedIn

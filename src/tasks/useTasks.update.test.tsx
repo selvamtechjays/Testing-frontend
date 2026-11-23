@@ -471,6 +471,7 @@ describe('useTasks filters (Task-23)', () => {
       priority: 'all',
       due: 'any',
       sort: 'newest',
+      tag: 'any',
     });
     expect(hook.result.current.search).toBe('milk');
     window.localStorage.clear();

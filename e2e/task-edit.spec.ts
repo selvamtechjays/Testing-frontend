@@ -55,6 +55,8 @@ const seed = (): StubTask[] => [
 async function stubTasksApi(page: Page, options: { failPatch?: boolean } = {}) {
   const tasks = seed();
   await page.route('**/api/auth/me', (route) => route.fulfill(json(200, { user: USER })));
+  // Signed-in pages also read the user's tags (task-tags); none keeps this spec hermetic.
+  await page.route(/\/api\/tags(\?.*)?$/, (route) => route.fulfill(json(200, { tags: [] })));
   await page.route(/\/api\/tasks(\?.*)?$/, (route) => route.fulfill(json(200, { tasks })));
   await page.route('**/api/tasks/*', (route) => {
     if (options.failPatch) {

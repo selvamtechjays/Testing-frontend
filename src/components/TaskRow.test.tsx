@@ -86,6 +86,11 @@ describe('TaskList', () => {
         onChangePriority={noop}
         onChangeNotes={noop}
         onDelete={noop}
+        tags={[]}
+        tagsStatus="ready"
+        onChangeTags={noop}
+        onCreateTag={() => Promise.resolve({ ok: true })}
+        onRetryTags={() => undefined}
       />,
     );
     expect(listedTitles()).toEqual(['Plan launch', 'Pay hosting invoice', 'Send logo']);

@@ -15,6 +15,8 @@ interface TextFieldProps {
   /** Names the input for assistive tech without drawing the label (a row's own date box). */
   labelHidden?: boolean;
   disabled?: boolean;
+  /** Stops typing at this many characters (a name box); the server still judges the value. */
+  maxLength?: number;
   /** Extra class for the field wrapper, so a screen can place it. */
   className?: string;
   onBlur?: () => void;
@@ -54,6 +56,7 @@ export function TextField({
   labelHidden = false,
   disabled,
   className,
+  maxLength,
   onBlur,
   onKeyDown,
 }: TextFieldProps) {
@@ -72,6 +75,7 @@ export function TextField({
         onChange={handleChange}
         autoComplete={autoComplete}
         max={max}
+        maxLength={maxLength}
         disabled={disabled}
         aria-label={labelHidden ? label : undefined}
         onBlur={onBlur}

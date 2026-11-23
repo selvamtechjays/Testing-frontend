@@ -27,6 +27,10 @@ export class AppPage {
     await this.page.route(/\/api\/tasks(\?.*)?$/, (route) =>
       route.fulfill({ status: 200, contentType: 'application/json', body: '{"tasks":[]}' }),
     );
+    // The page also reads the user's tags (task-tags); none keeps it hermetic too.
+    await this.page.route(/\/api\/tags(\?.*)?$/, (route) =>
+      route.fulfill({ status: 200, contentType: 'application/json', body: '{"tags":[]}' }),
+    );
     await this.page.goto('/');
   }
 }
