@@ -5,7 +5,7 @@ import { act } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import App from '../App';
 import type { Task } from '../api/types';
-import { localToday } from '../lib/localDate';
+import { addYears, formatDueDate, localToday } from '../lib/localDate';
 import { meSignedIn, USER } from '../test/mocks/auth';
 import { server } from '../test/mocks/server';
 import { listBodyFor, listTasksMatching, serverErrorBody } from '../test/mocks/tasks';
@@ -205,6 +205,7 @@ describe('task list: filters, sort and overdue summary (Task-23)', { timeout: 15
       priority: 'all',
       due: 'any',
       sort: 'due',
+      tag: 'any',
     });
     unmount();
 
@@ -366,6 +367,8 @@ describe(
   { timeout: 15000 },
   () => {
     it('adds with a date and priority, showing them at once (AC-2)', async () => {
+      // A date a year ahead, so the row reads "Due ..." whatever day the suite runs on.
+      const due = addYears(localToday(), 1);
       let body: unknown;
       server.use(
         http.post('/api/tasks', async ({ request }) => {
@@ -375,7 +378,7 @@ describe(
               task: buildTask({
                 id: 'new1',
                 title: 'Book flights',
-                dueDate: '2026-11-20',
+                dueDate: due,
                 priority: 'high',
               }),
             },
@@ -386,7 +389,7 @@ describe(
       renderList(listTasksMatching([milk]));
       await waitFor(() => expect(listedTitles()).toEqual(['Buy milk']));
       await userEvent.type(screen.getByLabelText('New task'), 'Book flights');
-      fireEvent.change(screen.getByLabelText('Due date'), { target: { value: '2026-11-20' } });
+      fireEvent.change(screen.getByLabelText('Due date'), { target: { value: due } });
       await userEvent.selectOptions(
         within(screen.getByLabelText('New task').closest('form') as HTMLElement).getByRole(
           'combobox',
@@ -396,9 +399,9 @@ describe(
       );
       await userEvent.click(screen.getByRole('button', { name: 'Add' }));
       await waitFor(() => expect(listedTitles()).toEqual(['Book flights', 'Buy milk']));
-      expect(body).toEqual({ title: 'Book flights', dueDate: '2026-11-20', priority: 'high' });
+      expect(body).toEqual({ title: 'Book flights', dueDate: due, priority: 'high' });
       expect(screen.getByText('High priority')).toBeInTheDocument();
-      expect(screen.getByText('Due Nov 20, 2026')).toBeInTheDocument();
+      expect(screen.getByText(`Due ${formatDueDate(due)}`)).toBeInTheDocument();
     });
 
     it('adds with neither field in one step: Medium and no date (AC-1)', async () => {

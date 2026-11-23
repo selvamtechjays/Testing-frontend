@@ -1,5 +1,6 @@
 import { http, HttpResponse } from 'msw';
 import { meUnauthenticated } from './auth';
+import { listTagsEmpty } from './tags';
 import { deleteTaskNoContent, listTasksEmpty } from './tasks';
 
 // Default handlers shared by every test. Keep this list minimal: per-test
@@ -9,5 +10,6 @@ export const handlers = [
   http.get('/api/__harness/ping', () => HttpResponse.json({ ok: true })),
   meUnauthenticated,
   listTasksEmpty,
+  listTagsEmpty,
   deleteTaskNoContent,
 ];

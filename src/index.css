@@ -35,6 +35,18 @@
   --shadow-raised: 0 1px 2px rgb(20 20 40 / 6%), 0 2px 8px rgb(20 20 40 / 6%);
   --shadow-hover: 0 8px 24px -6px rgb(79 70 229 / 25%), 0 2px 6px rgb(20 20 40 / 8%);
   --shadow-overlay: 0 16px 32px -6px rgb(20 20 40 / 20%), 0 4px 8px -2px rgb(20 20 40 / 10%);
+  --tag-gray-bg: #ececf2;
+  --tag-gray-fg: #3d3d52;
+  --tag-red-bg: #fde8ea;
+  --tag-red-fg: #9b1c2c;
+  --tag-orange-bg: #ffedd5;
+  --tag-orange-fg: #9a3412;
+  --tag-green-bg: #dcfce7;
+  --tag-green-fg: #166534;
+  --tag-blue-bg: #dbeafe;
+  --tag-blue-fg: #1e40af;
+  --tag-purple-bg: #ede9fe;
+  --tag-purple-fg: #5b21b6;
   color-scheme: light;
 
   /* Brand surfaces — gradients are decorative and need no contrast ratio */
@@ -150,6 +162,18 @@
     --shadow-raised: 0 1px 2px rgb(0 0 0 / 40%), 0 2px 8px rgb(0 0 0 / 30%);
     --shadow-hover: 0 8px 24px -6px rgb(139 143 248 / 30%), 0 2px 6px rgb(0 0 0 / 40%);
     --shadow-overlay: 0 16px 32px -6px rgb(0 0 0 / 60%), 0 4px 8px -2px rgb(0 0 0 / 40%);
+    --tag-gray-bg: #2a2a3c;
+    --tag-gray-fg: #d4d4e4;
+    --tag-red-bg: #3b1a20;
+    --tag-red-fg: #f9a8b0;
+    --tag-orange-bg: #3a2210;
+    --tag-orange-fg: #fdba74;
+    --tag-green-bg: #12301f;
+    --tag-green-fg: #86efac;
+    --tag-blue-bg: #172554;
+    --tag-blue-fg: #93c5fd;
+    --tag-purple-bg: #2e1f5e;
+    --tag-purple-fg: #c4b5fd;
     color-scheme: dark;
   }
 }
@@ -186,6 +210,18 @@
   --shadow-raised: 0 1px 2px rgb(0 0 0 / 40%), 0 2px 8px rgb(0 0 0 / 30%);
   --shadow-hover: 0 8px 24px -6px rgb(139 143 248 / 30%), 0 2px 6px rgb(0 0 0 / 40%);
   --shadow-overlay: 0 16px 32px -6px rgb(0 0 0 / 60%), 0 4px 8px -2px rgb(0 0 0 / 40%);
+  --tag-gray-bg: #2a2a3c;
+  --tag-gray-fg: #d4d4e4;
+  --tag-red-bg: #3b1a20;
+  --tag-red-fg: #f9a8b0;
+  --tag-orange-bg: #3a2210;
+  --tag-orange-fg: #fdba74;
+  --tag-green-bg: #12301f;
+  --tag-green-fg: #86efac;
+  --tag-blue-bg: #172554;
+  --tag-blue-fg: #93c5fd;
+  --tag-purple-bg: #2e1f5e;
+  --tag-purple-fg: #c4b5fd;
   color-scheme: dark;
 }
 

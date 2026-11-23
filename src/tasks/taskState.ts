@@ -1,4 +1,4 @@
-import type { Task } from '../api/types';
+import type { Tag, Task, TaskTag } from '../api/types';
 import { dueState } from '../lib/localDate';
 
 /** Pure list reducers for the three mutation shapes. Newest first; none mutates its input. */
@@ -33,13 +33,36 @@ export function removeById(list: Task[], id: string): Task[] {
   return list.filter((task) => task.id !== id);
 }
 
+/** Tag order everywhere: by name ignoring case (the server's collation: accents count, case does not). */
+export function sortByName<T extends { name: string }>(list: T[]): T[] {
+  return [...list].sort((a, b) => a.name.localeCompare(b.name, 'en', { sensitivity: 'accent' }));
+}
+
+/**
+ * The tags a task carries for these ids, sorted by name. Each is read from the user's tag list; an
+ * id missing from it (the list is out of date or not loaded) keeps the task's own copy, and an id
+ * known to neither is dropped.
+ */
+export function tagsForIds(all: Tag[], ids: string[], own: TaskTag[] = []): TaskTag[] {
+  const found = ids.flatMap((id) => {
+    const tag = all.find((candidate) => candidate.id === id) ?? own.find((t) => t.id === id);
+    return tag ? [{ id: tag.id, name: tag.name, colour: tag.colour }] : [];
+  });
+  return sortByName(found);
+}
+
+/** True when both lists hold the same tags with the same names and colours, in the same order. */
+export function sameTags(a: TaskTag[], b: TaskTag[]): boolean {
+  return (
+    a.length === b.length &&
+    a.every((tag, i) => tag.id === b[i].id && tag.name === b[i].name && tag.colour === b[i].colour)
+  );
+}
+
 /** Changes exactly one field of one row, leaving every other row and field as it is. */
-export function patchField<K extends 'title' | 'status' | 'dueDate' | 'priority' | 'notes'>(
-  list: Task[],
-  id: string,
-  field: K,
-  value: Task[K],
-): Task[] {
+export function patchField<
+  K extends 'title' | 'status' | 'dueDate' | 'priority' | 'notes' | 'tags',
+>(list: Task[], id: string, field: K, value: Task[K]): Task[] {
   return list.map((task) => (task.id === id ? { ...task, [field]: value } : task));
 }
 
@@ -68,17 +91,24 @@ function changedSince(sent: Task | undefined, now: Task): boolean {
       sent.status !== now.status ||
       sent.dueDate !== now.dueDate ||
       sent.priority !== now.priority ||
-      sent.notes !== now.notes)
+      sent.notes !== now.notes ||
+      !sameTags(sent.tags, now.tags))
   );
 }
 
 /**
  * What a search response becomes once the user has kept working while it was in flight.
  * `sent` is the list when the request went out, `now` the list as it is when the answer lands.
- * Rows added since stay on top in their current order; rows edited since keep their current
- * values over the response's; rows deleted since stay gone. Everything else is the response.
+ * Rows added since stay on top in their current order; rows edited since, or still saving a
+ * change, keep their current values over the response's; rows deleted since stay gone. Everything else is the response.
  */
-export function mergeSearchResult(response: Task[], sent: Task[], now: Task[]): Task[] {
+export function mergeSearchResult(
+  response: Task[],
+  sent: Task[],
+  now: Task[],
+  /** A row with a change still saving keeps its current values: the response may predate the save. */
+  isBusy: (id: string) => boolean = () => false,
+): Task[] {
   const sentById = new Map(sent.map((task) => [task.id, task]));
   const nowById = new Map(now.map((task) => [task.id, task]));
   const added = now.filter((task) => !sentById.has(task.id));
@@ -87,7 +117,8 @@ export function mergeSearchResult(response: Task[], sent: Task[], now: Task[]): 
     .filter((row) => !addedIds.has(row.id) && (nowById.has(row.id) || !sentById.has(row.id)))
     .map((row) => {
       const current = nowById.get(row.id);
-      if (!current || !changedSince(sentById.get(row.id), current)) return row;
+      if (!current) return row;
+      if (!isBusy(row.id) && !changedSince(sentById.get(row.id), current)) return row;
       return {
         ...row,
         title: current.title,
@@ -95,6 +126,7 @@ export function mergeSearchResult(response: Task[], sent: Task[], now: Task[]): 
         dueDate: current.dueDate,
         priority: current.priority,
         notes: current.notes,
+        tags: current.tags,
       };
     });
   return [...added, ...rest];

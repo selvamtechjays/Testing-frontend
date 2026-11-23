@@ -14,7 +14,11 @@ import {
   replaceId,
   mergeSearchResult,
   editedSince,
+  sameTags,
+  sortByName,
+  tagsForIds,
 } from './taskState';
+import { buildTag } from '../test/mocks/tags';
 
 const a = buildTask({ id: 'a', title: 'A' });
 const b = buildTask({ id: 'b', title: 'B' });
@@ -206,5 +210,55 @@ describe('mergeSearchResult keeps edits to date and priority (Task-23 AC-14)', (
     const merged = mergeSearchResult([before], [before], [edited]);
     expect(merged[0]).toMatchObject({ dueDate: '2026-11-20', priority: 'high' });
     expect(editedSince([before], [edited], 'a')).toBe(true);
+  });
+});
+
+describe('tag helpers (FEAT-TAG-03 AC-1 AC-6 AC-28)', () => {
+  const work = buildTag({ id: 'w', name: 'Work', colour: 'blue' });
+  const home = buildTag({ id: 'h', name: 'home', colour: 'green' });
+  const errands = buildTag({ id: 'e', name: 'Errands' });
+
+  it('sorts tags by name ignoring case (TAG03 AC-1)', () => {
+    expect(sortByName([work, home, errands]).map((t) => t.name)).toEqual([
+      'Errands',
+      'home',
+      'Work',
+    ]);
+  });
+
+  it('builds a task tag list from ids in name order and drops unknown ids (TAG03 AC-6)', () => {
+    const list = tagsForIds([work, home, errands], ['w', 'nope', 'e']);
+    expect(list).toEqual([
+      { id: 'e', name: 'Errands', colour: 'gray' },
+      { id: 'w', name: 'Work', colour: 'blue' },
+    ]);
+  });
+
+  it('keeps the own copy of a tag the list no longer knows (TAG03 AC-25)', () => {
+    const own = [{ id: 'x', name: 'Old', colour: 'red' as const }];
+    expect(tagsForIds([], ['x'], own)).toEqual(own);
+  });
+
+  it('compares tag lists by id, name and colour (TAG03 AC-28)', () => {
+    const one = [{ id: 'w', name: 'Work', colour: 'blue' as const }];
+    expect(sameTags(one, [{ ...one[0] }])).toBe(true);
+    expect(sameTags(one, [{ ...one[0], colour: 'red' }])).toBe(false);
+    expect(sameTags(one, [])).toBe(false);
+  });
+
+  it('patches only the tags of one row (TAG03 AC-6)', () => {
+    const row = buildTask({ id: 'r' });
+    const next = [{ id: 'w', name: 'Work', colour: 'blue' as const }];
+    const out = patchField([row, a], 'r', 'tags', next);
+    expect(out[0].tags).toEqual(next);
+    expect(out[1]).toBe(a);
+  });
+
+  it('keeps tags changed while a response was in flight (TAG03 AC-28 BR-15)', () => {
+    const before = buildTask({ id: 'a' });
+    const ticked = { ...before, tags: [{ id: 'w', name: 'Work', colour: 'blue' as const }] };
+    const merged = mergeSearchResult([before], [before], [ticked]);
+    expect(merged[0].tags).toEqual(ticked.tags);
+    expect(editedSince([before], [ticked], 'a')).toBe(true);
   });
 });

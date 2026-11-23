@@ -40,7 +40,7 @@ const outsideRoot = (css: string, name: string) => {
 
 const RAW_COLOUR = /#[0-9a-f]{3,8}\b|\b(?:rgb|rgba|hsl|hsla|hwb|lab|lch|oklab|oklch)\(/i;
 const NAMED_COLOUR_VALUE =
-  /(?:^|[\s:])(?:white|black|red|green|blue|gray|grey|orange|yellow|purple|pink|navy|teal|silver|maroon)\b(?=[^{]*;)/i;
+  /(?:^|[\s:])(?:white|black|red|green|blue|gray|grey|orange|yellow|purple|pink|navy|teal|silver|maroon)\b(?!-)(?=[^{]*;)/i;
 
 const indexCss = files.find((f) => f.name === 'index.css')?.css ?? '';
 const lightBlock = /:root\s*\{([^}]*)\}/.exec(indexCss)?.[1] ?? '';
@@ -169,6 +169,14 @@ describe('CSS standard §23 (DEC-110)', () => {
     }
   });
 
+  it('redefines every tag chip colour for dark (TAG03 AC-30)', () => {
+    const tagTokens = Object.keys(declarations(lightBlock)).filter((n) => n.startsWith('--tag-'));
+    expect(tagTokens).toHaveLength(12);
+    for (const name of tagTokens) {
+      expect(declarations(darkExplicitBlock), name).toHaveProperty(name);
+    }
+  });
+
   it('keeps the 3px focus ring token and uses it for every outline (CSS-FE-006)', () => {
     expect(lightBlock).toMatch(/--focus-ring:\s*3px solid var\(--color-focus\)/);
     expect(lightBlock).toMatch(/--control-height:\s*(?:4[4-9]|[5-9]\d)px/);
@@ -291,6 +299,20 @@ describe('CSS standard §23 (DEC-110)', () => {
         expect((light + 0.05) / (dark + 0.05)).toBeGreaterThanOrEqual(BODY);
       },
     );
+
+    // Task-tags: the six chip colour pairs. A chip's text is the pair's fg on its bg; its 1px border
+    // is the fg too, so the boundary is fg against the surfaces a chip sits on (FEAT-TAG-03 BR-12).
+    describe.each(['gray', 'red', 'orange', 'green', 'blue', 'purple'])('tag chip %s', (hue) => {
+      it('text is at least 4.5:1 on its own background (TAG03 AC-30)', () => {
+        expect(ratio(`--tag-${hue}-fg`, `--tag-${hue}-bg`)).toBeGreaterThanOrEqual(BODY);
+      });
+
+      it('boundaries are at least 3:1 against every surface a chip sits on (TAG03 AC-30)', () => {
+        for (const surface of ['--color-surface', '--color-subtle', '--color-canvas']) {
+          expect(ratio(`--tag-${hue}-fg`, surface), surface).toBeGreaterThanOrEqual(UI);
+        }
+      });
+    });
 
     it.each([
       ['--color-border-strong', '--color-bg'],

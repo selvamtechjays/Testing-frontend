@@ -1,0 +1,99 @@
+/* Tags picker: sits inside its row, under the row's fields. Tokens only; light and dark come from them. */
+.task-tags {
+  display: flex;
+  flex: 1 1 100%;
+  flex-direction: column;
+  gap: var(--space-2);
+  padding: var(--space-3);
+  border: 1px solid var(--color-divider);
+  border-radius: var(--radius-md);
+  background: var(--color-surface);
+  box-shadow: var(--shadow-raised);
+  animation: task-tags-enter var(--duration-base) var(--ease-standard) both;
+}
+
+.task-tags.task-tags--leaving {
+  overflow: hidden;
+  pointer-events: none;
+  animation: task-tags-leave var(--duration-base) var(--ease-standard) forwards;
+}
+
+.task-tags-options {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-1);
+  min-width: 0;
+  margin: 0;
+  padding: 0;
+  border: 0;
+}
+
+/* Read by assistive tech, never drawn. */
+.task-tags-legend {
+  position: absolute;
+  width: 0.0625rem;
+  height: 0.0625rem;
+  margin: -0.0625rem;
+  padding: 0;
+  overflow: hidden;
+  clip-path: inset(50%);
+}
+
+/* A 44px row: the whole label is the target for its checkbox. */
+.task-tags-option {
+  display: flex;
+  align-items: center;
+  gap: var(--space-3);
+  min-width: 0;
+  min-height: var(--control-height);
+  cursor: pointer;
+}
+
+.task-tags-option:has(:disabled) {
+  cursor: not-allowed;
+}
+
+.task-tags-check {
+  flex-shrink: 0;
+  width: var(--check-size);
+  height: var(--check-size);
+  margin: 0 var(--space-2);
+  accent-color: var(--color-primary);
+}
+
+.task-tags-note {
+  margin: 0;
+  color: var(--color-muted);
+  font-size: var(--font-size-sm);
+  line-height: var(--line-height-sm);
+}
+
+.task-tags .field {
+  margin-bottom: 0;
+}
+
+@media (min-width: 48rem) {
+  .task-tags {
+    margin-left: calc(var(--control-height) + var(--space-3));
+    padding: var(--space-4);
+  }
+}
+
+@keyframes task-tags-enter {
+  from {
+    opacity: 0;
+    transform: translateY(-0.5rem);
+  }
+
+  to {
+    opacity: 1;
+    transform: none;
+  }
+}
+
+@keyframes task-tags-leave {
+  to {
+    opacity: 0;
+    transform: translateY(-0.5rem);
+  }
+}

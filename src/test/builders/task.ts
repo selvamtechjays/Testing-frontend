@@ -13,6 +13,7 @@ export function buildTask(overrides: Partial<Task> = {}): Task {
     dueDate: null,
     priority: 'medium',
     notes: null,
+    tags: [],
     ...overrides,
   };
 }

@@ -1,4 +1,4 @@
-import type { ListFilters } from '../api/types';
+import type { ListFilters, Tag } from '../api/types';
 import { copy } from '../copy';
 import { Button } from './Button';
 import {
@@ -6,7 +6,9 @@ import {
   PRIORITY_FILTER_OPTIONS,
   SORT_OPTIONS,
   STATUS_OPTIONS,
+  tagFilterOptions,
 } from '../tasks/filterOptions';
+import type { Ref } from 'react';
 import { SelectField } from './SelectField';
 import './TaskFilterBar.css';
 
@@ -16,10 +18,56 @@ interface TaskFilterBarProps {
   onClear: () => void;
   /** True when any choice differs from its default; Clear filters shows only then. */
   active: boolean;
+  /** The user's tags, sorted by name: the Tag select's options after Any and No tags. */
+  tags: Tag[];
+  /** The Manage tags button: shown when given; it toggles the panel below the bar. */
+  manage?: { open: boolean; onToggle: () => void; ref?: Ref<HTMLButtonElement> };
 }
 
-/** Status, priority, due and sort as labelled native selects; each change applies at once. */
-export function TaskFilterBar({ filters, onChange, onClear, active }: TaskFilterBarProps) {
+type ManageProps = NonNullable<TaskFilterBarProps['manage']>;
+
+/** Clear filters (while a filter is active) and Manage tags (when the page offers it). */
+function FilterActions({
+  active,
+  onClear,
+  manage,
+}: {
+  active: boolean;
+  onClear: () => void;
+  manage?: ManageProps;
+}) {
+  if (!active && !manage) return null;
+  return (
+    <div className="task-filter-bar-actions">
+      {active ? (
+        <Button variant="secondary" onClick={onClear}>
+          {copy.clearFilters}
+        </Button>
+      ) : null}
+      {manage ? (
+        <Button
+          variant="secondary"
+          ref={manage.ref}
+          aria-expanded={manage.open}
+          aria-controls={manage.open ? 'manage-tags-panel' : undefined}
+          onClick={manage.onToggle}
+        >
+          {copy.manageTagsButton}
+        </Button>
+      ) : null}
+    </div>
+  );
+}
+
+/** Status, priority, due, sort and tag as labelled native selects; each change applies at once. */
+export function TaskFilterBar({
+  filters,
+  onChange,
+  onClear,
+  active,
+  tags,
+  manage,
+}: TaskFilterBarProps) {
   return (
     <div className="card task-filter-bar" role="group" aria-label={copy.filtersGroupLabel}>
       <div className="task-filter-bar-fields">
@@ -51,12 +99,15 @@ export function TaskFilterBar({ filters, onChange, onClear, active }: TaskFilter
           options={SORT_OPTIONS}
           onChange={(value) => onChange('sort', value)}
         />
+        <SelectField
+          id="filter-tag"
+          label={copy.filterTagLabel}
+          value={filters.tag}
+          options={tagFilterOptions(tags)}
+          onChange={(value) => onChange('tag', value)}
+        />
       </div>
-      {active ? (
-        <Button variant="secondary" className="task-filter-bar-clear" onClick={onClear}>
-          {copy.clearFilters}
-        </Button>
-      ) : null}
+      <FilterActions active={active} onClear={onClear} manage={manage} />
     </div>
   );
 }

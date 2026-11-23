@@ -137,6 +137,11 @@ function renderList(tasks: Task[], onChangeNotes = vi.fn(noop)) {
     onChangePriority: noop,
     onChangeNotes,
     onDelete: noop,
+    tags: [],
+    tagsStatus: 'ready' as const,
+    onChangeTags: noop,
+    onCreateTag: () => Promise.resolve({ ok: true }),
+    onRetryTags: () => undefined,
   };
   const view = render(<TaskList tasks={tasks} {...props} />);
   return {
