@@ -554,7 +554,7 @@ Every row is runnable on its own. Copy the command. Status is `pending`: written
 - **FEAT-TAG-03 TS-35, the "click away" half.** The scenario says the picker also closes on a click
   outside it. AC-27 and BR-13 ask only for Escape and one open panel at a time, and the notes panel
   does not close on a click outside either, so the picker was built to match. The TS-35 rows above
-  prove the Escape half only. Raised for the client as OQ-TAG-03 (DEC-293); no row claims the
+  prove the Escape half only. Raised for the client as OQ-TAG-04 (DEC-293); no row claims the
   click-away half.
 
 ## Run everything for this feature
